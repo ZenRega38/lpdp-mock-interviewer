@@ -1,0 +1,23 @@
+# ── Data pribadi: JANGAN pernah di-commit ─────────────────────────
+# Folder raw/ berisi knowledge base kandidat (CV, esai, data sensitif).
+# Hanya raw/README.md yang ikut ke repo sebagai panduan isi folder.
+raw/*
+!raw/README.md
+
+# ── Secrets ───────────────────────────────────────────────────────
+# Aplikasi tidak membaca file ini (API key hanya diketik di browser),
+# tapi diabaikan untuk berjaga-jaga.
+.env
+.env.*
+*.key
+*.pem
+secrets.*
+config.local.*
+
+# ── OS / editor ───────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+*.swp

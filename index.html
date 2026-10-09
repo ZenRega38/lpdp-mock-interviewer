@@ -1,0 +1,1885 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Simulasi wawancara substansi LPDP berbasis suara (voice-to-voice) dengan Gemini, berjalan sepenuhnya di browser." />
+  <meta name="theme-color" content="#1e3a8a" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8E%93%3C/text%3E%3C/svg%3E" />
+  <title>LPDP AI Mock Interviewer</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    html, body { height: 100%; }
+    #chatLog { scroll-behavior: smooth; }
+    .dot-typing span { display: inline-block; width: 6px; height: 6px; margin: 0 2px; border-radius: 9999px; background: currentColor; animation: blink 1.2s infinite both; }
+    .dot-typing span:nth-child(2) { animation-delay: .2s; }
+    .dot-typing span:nth-child(3) { animation-delay: .4s; }
+    @keyframes blink { 0%, 80%, 100% { opacity: .2; } 40% { opacity: 1; } }
+    .mic-active { box-shadow: 0 0 0 0 rgba(239, 68, 68, .6); animation: pulse-ring 1.3s infinite; }
+    @keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgba(239,68,68,.55); } 70% { box-shadow: 0 0 0 16px rgba(239,68,68,0); } 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); } }
+    .msg-body h4 { font-weight: 700; margin: .6rem 0 .25rem; }
+    .msg-body p { margin: .25rem 0; }
+    .msg-body ul { list-style: disc; padding-left: 1.25rem; margin: .25rem 0; }
+    .msg-body ol { list-style: decimal; padding-left: 1.25rem; margin: .25rem 0; }
+    #micBtn, #zMicBtn { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+    /* Zoom-like view */
+    .ztile::after { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; box-shadow: inset 0 0 0 3px transparent; transition: box-shadow .15s; }
+    .ztile.zactive::after { box-shadow: inset 0 0 0 3px #22c55e; }
+    .zwave { display: inline-flex; align-items: flex-end; gap: 2px; height: 12px; }
+    .zwave.hidden { display: none; }
+    .zwave i { width: 3px; height: 3px; background: #22c55e; border-radius: 2px; animation: zw .9s infinite ease-in-out; }
+    .zwave i:nth-child(2) { animation-delay: .15s; }
+    .zwave i:nth-child(3) { animation-delay: .3s; }
+    @keyframes zw { 0%, 100% { height: 3px; } 50% { height: 12px; } }
+    .zbtn { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-width: 4.25rem; padding: .375rem .5rem; border-radius: .5rem; font-size: 11px; color: #e5e7eb; position: relative; }
+    .zbtn:hover:not(:disabled) { background: rgba(255,255,255,.08); }
+    .zbtn:disabled { opacity: .4; cursor: not-allowed; }
+    .zbtn.zbtn-live { background: rgba(34,197,94,.2); }
+    .zbtn > span { white-space: nowrap; }
+    @media (max-width: 639px) { .zbtn { min-width: 3rem; padding: .375rem .25rem; font-size: 10px; } }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800">
+  <div class="min-h-full flex flex-col">
+    <!-- Header -->
+    <header class="bg-gradient-to-r from-blue-900 to-indigo-800 text-white shadow">
+      <div class="max-w-7xl mx-auto px-4 py-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 class="text-xl md:text-2xl font-bold tracking-tight">🎓 LPDP AI Mock Interviewer</h1>
+          <p class="text-blue-200 text-sm">Voice-to-Voice · MSc Artificial Intelligence · University of Edinburgh</p>
+        </div>
+        <div class="flex items-center gap-4 text-sm">
+          <div class="flex items-center gap-2 bg-white/10 rounded-full px-3 py-1.5">
+            <span id="statusDot" class="w-2.5 h-2.5 rounded-full bg-slate-300"></span>
+            <span id="statusText">Belum dimulai</span>
+          </div>
+          <div class="hidden sm:flex items-center gap-3 text-blue-100">
+            <span title="Durasi">⏱ <span id="timer">00:00</span></span>
+            <span title="Jumlah pertanyaan panel">❓ <span id="qCount">0</span></span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 py-5 grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-5">
+      <!-- Settings panel -->
+      <aside class="space-y-4">
+        <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 space-y-4">
+          <h2 class="font-semibold text-slate-700">⚙️ Pengaturan</h2>
+
+          <div>
+            <label for="apiKey" class="block text-sm font-medium text-slate-600 mb-1">Gemini API Key</label>
+            <div class="flex gap-2">
+              <input id="apiKey" type="password" autocomplete="off" spellcheck="false" placeholder="AIza..."
+                class="flex-1 min-w-0 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+              <button id="toggleKey" type="button" class="px-3 rounded-lg border border-slate-300 text-sm hover:bg-slate-50" title="Tampilkan/sembunyikan">👁</button>
+            </div>
+            <label class="mt-2 flex items-center gap-2 text-xs text-slate-500">
+              <input id="rememberKey" type="checkbox" class="rounded" /> Ingat API key di browser ini
+            </label>
+            <p class="mt-1 text-xs text-slate-400">Dapatkan gratis di <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" class="text-indigo-600 underline">Google AI Studio</a>. Key hanya dikirim langsung ke Google dan tidak pernah disimpan di server mana pun. Untuk versi online, batasi key ke domain Anda di Google Cloud Console.</p>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label for="lang" class="block text-sm font-medium text-slate-600 mb-1">Bahasa</label>
+              <select id="lang" class="w-full rounded-lg border border-slate-300 px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <option value="id">🇮🇩 Indonesia (ID)</option>
+                <option value="en">🇬🇧 English (EN)</option>
+              </select>
+            </div>
+            <div>
+              <label for="model" class="block text-sm font-medium text-slate-600 mb-1">Model</label>
+              <select id="model" class="w-full rounded-lg border border-slate-300 px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <option value="gemini-flash-latest">gemini-flash-latest (Flash terbaru)</option>
+                <option value="gemini-flash-lite-latest">gemini-flash-lite-latest</option>
+                <option value="gemini-2.5-flash">gemini-2.5-flash</option>
+                <option value="gemini-2.5-flash-lite">gemini-2.5-flash-lite</option>
+                <option value="__custom">Lainnya (ketik manual)…</option>
+              </select>
+            </div>
+          </div>
+          <input id="customModel" type="text" autocomplete="off" spellcheck="false" placeholder="mis. gemini-3.5-flash"
+            class="hidden w-full -mt-2 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+
+          <div>
+            <label for="voice" class="block text-sm font-medium text-slate-600 mb-1">Suara Panelis (TTS)</label>
+            <select id="voice" class="w-full rounded-lg border border-slate-300 px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              <option value="">Otomatis</option>
+            </select>
+            <p id="voiceWarn" class="hidden mt-1 text-xs text-amber-600"></p>
+          </div>
+
+          <div>
+            <label for="rate" class="flex justify-between text-sm font-medium text-slate-600 mb-1">
+              <span>Kecepatan bicara</span><span id="rateVal" class="text-slate-400">1.0x</span>
+            </label>
+            <input id="rate" type="range" min="0.7" max="1.5" step="0.1" value="1" class="w-full accent-indigo-600" />
+          </div>
+
+          <div>
+            <label for="micMode" class="block text-sm font-medium text-slate-600 mb-1">Mode Mikrofon</label>
+            <select id="micMode" class="w-full rounded-lg border border-slate-300 px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              <option value="hold">Tahan untuk bicara (push-to-talk)</option>
+              <option value="toggle">Klik mulai, klik lagi untuk kirim</option>
+            </select>
+          </div>
+
+          <label class="flex items-center gap-2 text-sm text-slate-600">
+            <input id="ttsToggle" type="checkbox" class="rounded" checked /> Bacakan respons panel otomatis
+          </label>
+        </section>
+
+        <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 space-y-3">
+          <h2 class="font-semibold text-slate-700">📚 Knowledge Base &amp; Mode Sesi</h2>
+          <div id="kbStatus" class="text-xs rounded-lg px-3 py-2 bg-amber-50 text-amber-800 border border-amber-200">Belum dimuat.</div>
+          <div class="flex flex-wrap gap-2">
+            <button id="kbReload" type="button" class="text-xs px-3 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">↻ Muat dari folder raw/</button>
+            <label id="kbPickLabel" class="text-xs px-3 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-50 cursor-pointer">
+              📂 Pilih file .md…
+              <input id="kbFile" type="file" accept=".md,.markdown,.txt,text/markdown,text/plain" multiple class="hidden" />
+            </label>
+            <button id="kbClear" type="button" class="text-xs px-3 py-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed">Hapus</button>
+          </div>
+          <p class="text-xs text-slate-400">Dijalankan lewat <code>http://localhost</code> dengan folder <code>raw/</code> terisi: dimuat otomatis. Versi online (GitHub Pages) atau file://: pilih file .md Anda; isinya disimpan hanya di browser ini, tidak pernah diunggah ke server mana pun selain Gemini.</p>
+
+          <div>
+            <label for="sessionMode" class="block text-sm font-medium text-slate-600 mb-1">Mode Sesi</label>
+            <select id="sessionMode" class="w-full rounded-lg border border-slate-300 px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-100">
+              <option value="full">Sesi penuh (±45 menit)</option>
+              <option value="focus">Sesi fokus (1 kategori)</option>
+              <option value="audit">Sesi audit berkas (Kategori J)</option>
+              <option value="pressure">Sesi tekanan (G13 + EXTRA)</option>
+            </select>
+          </div>
+          <div id="focusWrap" class="hidden">
+            <label for="focusCat" class="block text-sm font-medium text-slate-600 mb-1">Kategori Fokus</label>
+            <select id="focusCat" class="w-full rounded-lg border border-slate-300 px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-100">
+              <option value="A">A · Pembuka dan Profil Diri</option>
+              <option value="B">B · Motivasi, Kampus dan Program Studi</option>
+              <option value="C">C · Kelayakan Akademik dan Riset (ALFANDA)</option>
+              <option value="D">D · Skema STEM Industri Strategis dan Isu Nasional</option>
+              <option value="E">E · Rencana Kontribusi dan Pengabdian</option>
+              <option value="F">F · Nilai LPDP, Dana Negara dan Integritas</option>
+              <option value="G">G · Psikologi, Ketahanan dan Karakter</option>
+              <option value="H">H · Kepemimpinan dan Organisasi</option>
+              <option value="I">I · Pengalaman Kerja dan Fokus</option>
+              <option value="J">J · Serangan pada Berkas (Konsistensi)</option>
+              <option value="K">K · Isu Terkini dan Wawasan</option>
+              <option value="L">L · Rencana Cadangan, Finansial dan Logistik</option>
+              <option value="M">M · Penutup</option>
+              <option value="N">N · Mini-Set Bahasa Inggris</option>
+              <option value="S">S · Sensitif (agama, keluarga, domisili) ⚠</option>
+            </select>
+            <p id="sensitiveNote" class="hidden mt-1 text-xs text-red-600">Mode Sensitif aktif: data pribadi sensitif (Bagian 2.10 &amp; Kategori S) akan dikirim ke Gemini. Ucapkan "berhenti" kapan saja.</p>
+          </div>
+        </section>
+
+        <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 text-sm text-slate-600 space-y-2">
+          <h2 class="font-semibold text-slate-700">📋 Cara Pakai</h2>
+          <ol class="list-decimal pl-5 space-y-1">
+            <li>Masukkan Gemini API Key, pilih bahasa, pastikan Knowledge Base dimuat, lalu pilih mode sesi.</li>
+            <li>Klik <b>Mulai Wawancara</b>. Panel akan bertanya.</li>
+            <li><b>Tahan</b> tombol mic (atau <kbd class="px-1 border rounded bg-slate-50">Spasi</kbd>) saat menjawab, lepas untuk mengirim. Di HP, ubah <b>Mode Mikrofon</b> ke "Klik" agar tidak perlu menahan.</li>
+            <li>Idealnya tiap jawaban 30 sampai 90 detik; penghitung waktu berubah kuning/merah bila terlalu panjang.</li>
+            <li>Klik <b>Akhiri &amp; Evaluasi</b> untuk skor akhir.</li>
+          </ol>
+          <p id="sttWarn" class="hidden text-xs text-red-600 font-medium"></p>
+        </section>
+      </aside>
+
+      <!-- Chat area -->
+      <section id="chatSection" class="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col min-h-[70vh] lg:h-[calc(100vh-9rem)] scroll-mt-2">
+        <div class="flex items-center justify-between px-4 py-3 border-b border-slate-200">
+          <h2 class="font-semibold text-slate-700">💬 Chat Log <span class="font-normal text-slate-400 text-sm">(transkrip real-time)</span></h2>
+          <div class="flex gap-2">
+            <button id="stopTtsBtn" type="button" class="hidden text-xs px-3 py-1.5 rounded-lg bg-amber-100 text-amber-800 hover:bg-amber-200">🔇 Hentikan suara</button>
+            <button id="downloadBtn" type="button" class="text-xs px-3 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed" disabled>⬇ Unduh Transkrip</button>
+          </div>
+        </div>
+
+        <div id="chatLog" class="flex-1 overflow-y-auto px-4 py-4 space-y-3 bg-slate-50">
+          <div id="emptyState" class="h-full flex flex-col items-center justify-center text-center text-slate-400 py-16">
+            <div class="text-5xl mb-3">🎙️</div>
+            <p class="font-medium">Belum ada percakapan.</p>
+            <p class="text-sm">Isi API key lalu klik <b>Mulai Wawancara</b>.</p>
+          </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="border-t border-slate-200 p-4 space-y-3">
+          <div class="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:justify-center sm:gap-3 text-sm sm:text-base">
+            <button id="startBtn" type="button"
+              class="px-4 sm:px-5 py-3 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition">
+              ▶ Mulai Wawancara
+            </button>
+            <button id="micBtn" type="button" disabled
+              class="col-span-2 order-first sm:order-none px-6 py-4 sm:py-3 rounded-xl bg-rose-600 text-white font-semibold hover:bg-rose-700 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center justify-center gap-2">
+              <span>🎤</span><span id="micLabel">Tahan untuk Bicara</span>
+            </button>
+            <button id="endBtn" type="button" disabled
+              class="px-4 sm:px-5 py-3 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition">
+              ⏹ Akhiri &amp; Evaluasi
+            </button>
+            <button id="zoomBtn" type="button"
+              class="col-span-2 px-4 sm:px-5 py-3 rounded-xl bg-sky-600 text-white font-semibold hover:bg-sky-700 transition">
+              🎥 Mode Zoom
+            </button>
+          </div>
+          <form id="textForm" class="flex gap-2">
+            <input id="textInput" type="text" disabled autocomplete="off"
+              placeholder="Atau ketik jawaban di sini (cadangan jika mic tidak tersedia)…"
+              class="flex-1 min-w-0 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-100" />
+            <button id="sendBtn" type="submit" disabled
+              class="px-4 py-2 rounded-lg bg-slate-700 text-white text-sm hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed">Kirim</button>
+          </form>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Zoom-like meeting view -->
+  <div id="zoomView" class="hidden fixed inset-0 z-40 flex flex-col bg-[#1a1a1a] text-white select-none">
+    <div class="h-11 shrink-0 flex items-center justify-between gap-3 px-3 sm:px-4 text-xs text-slate-300 border-b border-white/5">
+      <div class="flex items-center gap-2 min-w-0">
+        <span class="text-emerald-400">🔒</span>
+        <span class="truncate font-medium text-slate-100">Seleksi Substansi LPDP · Ruang Wawancara</span>
+      </div>
+      <div class="flex items-center gap-3 shrink-0">
+        <span id="zRec" class="hidden items-center gap-1 text-red-400 font-semibold"><span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>REC</span>
+        <span id="zTimer" class="tabular-nums">00:00</span>
+        <span class="hidden sm:inline">👥 4 peserta</span>
+      </div>
+    </div>
+
+    <div class="flex-1 min-h-0 flex relative">
+      <div class="flex-1 min-w-0 flex flex-col p-2 sm:p-3 gap-2">
+        <div class="flex-1 min-h-0 grid grid-cols-2 grid-rows-2 gap-2 sm:gap-3">
+        <div id="zTile-psy" class="ztile relative rounded-xl bg-[#262626] overflow-hidden flex items-center justify-center">
+          <div class="w-16 h-16 sm:w-24 sm:h-24 lg:w-28 lg:h-28 rounded-full bg-violet-600 flex items-center justify-center text-xl sm:text-3xl font-semibold">PS</div>
+          <div class="absolute left-2 bottom-2 flex items-center gap-1.5 bg-black/60 rounded px-2 py-1 text-xs max-w-[90%]">
+            <span class="zmic shrink-0"></span><span class="zname truncate">Psikolog</span><span class="zwave hidden"><i></i><i></i><i></i></span>
+          </div>
+        </div>
+        <div id="zTile-aca" class="ztile relative rounded-xl bg-[#262626] overflow-hidden flex items-center justify-center">
+          <div class="w-16 h-16 sm:w-24 sm:h-24 lg:w-28 lg:h-28 rounded-full bg-amber-600 flex items-center justify-center text-xl sm:text-3xl font-semibold">AK</div>
+          <div class="absolute left-2 bottom-2 flex items-center gap-1.5 bg-black/60 rounded px-2 py-1 text-xs max-w-[90%]">
+            <span class="zmic shrink-0"></span><span class="zname truncate">Akademisi</span><span class="zwave hidden"><i></i><i></i><i></i></span>
+          </div>
+        </div>
+        <div id="zTile-lpdp" class="ztile relative rounded-xl bg-[#262626] overflow-hidden flex items-center justify-center">
+          <div class="w-16 h-16 sm:w-24 sm:h-24 lg:w-28 lg:h-28 rounded-full bg-sky-700 flex items-center justify-center text-xl sm:text-3xl font-semibold">LP</div>
+          <div class="absolute left-2 bottom-2 flex items-center gap-1.5 bg-black/60 rounded px-2 py-1 text-xs max-w-[90%]">
+            <span class="zmic shrink-0"></span><span class="zname truncate">Panelis LPDP</span><span class="zwave hidden"><i></i><i></i><i></i></span>
+          </div>
+        </div>
+        <div id="zTile-self" class="ztile relative rounded-xl bg-[#262626] overflow-hidden flex items-center justify-center">
+          <video id="zSelfVideo" class="hidden absolute inset-0 w-full h-full object-cover -scale-x-100" autoplay playsinline muted></video>
+          <div id="zSelfAvatar" class="w-16 h-16 sm:w-24 sm:h-24 lg:w-28 lg:h-28 rounded-full bg-indigo-600 flex items-center justify-center text-xl sm:text-3xl font-semibold">A</div>
+          <div class="absolute left-2 bottom-2 flex items-center gap-1.5 bg-black/60 rounded px-2 py-1 text-xs max-w-[90%]">
+            <span class="zmic shrink-0"></span><span class="zname truncate">Anda</span><span class="zwave hidden"><i></i><i></i><i></i></span>
+          </div>
+        </div>
+        </div>
+        <div class="shrink-0 h-16 sm:h-14 flex items-center justify-center">
+          <div id="zCaption" class="hidden max-w-3xl w-full sm:w-auto text-center bg-black/70 rounded-lg px-4 py-2 text-sm sm:text-base leading-snug line-clamp-3"></div>
+        </div>
+      </div>
+
+      <aside id="zChatPanel" class="hidden absolute inset-0 z-10 sm:static sm:inset-auto w-full sm:w-96 shrink-0 flex-col bg-white text-slate-800 select-text">
+        <div class="flex items-center justify-between px-4 py-2.5 border-b border-slate-200">
+          <span class="font-semibold text-sm">Chat &amp; Transkrip</span>
+          <button id="zChatClose" type="button" class="text-slate-500 hover:text-slate-800 text-lg leading-none" title="Tutup">✕</button>
+        </div>
+        <div id="zChatBody" class="flex-1 min-h-0 flex flex-col">
+          <div id="zFormSlot" class="p-3 border-t border-slate-200"></div>
+        </div>
+      </aside>
+    </div>
+
+    <div class="h-20 shrink-0 flex items-center justify-between gap-1 px-1 sm:px-6 bg-[#121212]">
+      <div class="flex items-center gap-1 sm:gap-2">
+        <button id="zMicBtn" type="button" class="zbtn"><span id="zMicIcon"></span><span id="zMicLabel">Tahan untuk Bicara</span></button>
+        <button id="zCamBtn" type="button" class="zbtn"><span id="zCamIcon"></span><span id="zCamLabel">Mulai Video</span></button>
+      </div>
+      <div class="flex items-center gap-1 sm:gap-2">
+        <button id="zStartBtn" type="button" class="zbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6"><circle cx="12" cy="12" r="10"/><path d="M10 8l6 4-6 4z" fill="currentColor"/></svg><span id="zStartLabel">Mulai</span></button>
+        <button id="zChatBtn" type="button" class="zbtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>
+          <span>Chat</span>
+          <span id="zUnread" class="hidden absolute top-0 right-2 min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-[10px] font-bold items-center justify-center"></span>
+        </button>
+      </div>
+      <div class="flex items-center gap-1 sm:gap-2">
+        <button id="zEndBtn" type="button" class="px-2.5 sm:px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-xs sm:text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed">
+          <span class="sm:hidden">Akhiri</span><span class="hidden sm:inline">Akhiri &amp; Evaluasi</span>
+        </button>
+        <button id="zExitBtn" type="button" class="zbtn" title="Kembali ke tampilan biasa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg><span>Keluar</span></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 hidden max-w-md w-[calc(100%-2rem)] rounded-lg bg-slate-900 text-white text-sm px-4 py-3 shadow-lg"></div>
+
+<script>
+(() => {
+  'use strict';
+
+  // ===================== SYSTEM PROMPT (hardcoded) =====================
+  const SYSTEM_PROMPT = 'Anda adalah gabungan dari 3 panelis wawancara LPDP (1. Psikolog yang menguji dan menilai psikis saya, 2. Akademisi yang menguji data kemampuan berfikir dan analisis serta penelitian saya dll, 3. Panelis LPDP yang menguji dan menilai komitmen kebangsaan dan cinta tanah air) yang sangat tajam, kritis, dan objektif. Kandidat mendaftar MSc Artificial Intelligence di University of Edinburgh. Aturan: Ajukan HANYA SATU pertanyaan dalam satu waktu. Gali alasan spesifik memilih Edinburgh, kesiapan akademik, rencana riset AI (terutama aplikasi di bioakustik, computer vision, atau deteksi penipuan), dan komitmen kontribusi di Indonesia. Jangan pernah memberikan pujian basa-basi. Jika jawaban dangkal, langsung serang dengan probing questions. Jika kandidat minta diakhiri, berikan evaluasi dan skor.';
+
+  const LANG = {
+    id: {
+      stt: 'id-ID',
+      ttsPrefix: 'id',
+      ttsFallbackLang: 'id-ID',
+      instruction:
+        '\n\nATURAN TAMBAHAN FORMAT:\n' +
+        '- Lakukan seluruh wawancara dalam Bahasa Indonesia yang formal.\n' +
+        '- Respons Anda akan dibacakan oleh text-to-speech, jadi gunakan kalimat lisan yang natural dan ringkas (maksimal sekitar 80 kata per giliran), tanpa markdown, tanpa emoji, tanpa daftar berpoin.\n' +
+        '- Awali setiap giliran dengan peran panelis yang sedang bertanya, misalnya "Psikolog:", "Akademisi:", atau "Panelis LPDP:". Bergantian antar panelis secara alami.\n' +
+        '- Jawaban kandidat berasal dari speech-to-text sehingga bisa mengandung salah ketik transkripsi; pahami maksudnya tanpa mengomentari kesalahan transkripsi.\n' +
+        '- Pengecualian: saat memberikan evaluasi akhir, Anda boleh lebih panjang dan menggunakan markdown sederhana (judul dan poin).',
+      startMsg: (mode) =>
+        `Saya kandidat beasiswa LPDP yang mendaftar MSc Artificial Intelligence di University of Edinburgh. Saya siap untuk ${mode}. Silakan mulai wawancara: perkenalkan panel secara sangat singkat, lalu ajukan pertanyaan pertama.`,
+      evalMsg:
+        'Saya minta wawancara diakhiri sekarang. Berikan laporan evaluasi akhir yang objektif dan tajam (gunakan markdown sederhana) dengan struktur berikut:\n' +
+        '1) Skor tiap panelis (Psikolog, Akademisi, Panelis LPDP) skala 0-100 beserta alasan singkat.\n' +
+        '2) Skor rubrik tujuh dimensi (Struktur, Bukti, Konsistensi dengan berkas, Ketenangan dan nada, Kaitan dengan kontribusi, Kedalaman teknis, Kerendahan hati) skala 1-5, masing-masing dengan satu kalimat alasan.\n' +
+        '3) Pertanyaan yang diajukan beserta ID bank pertanyaannya (jika ada) dan penilaian singkat tiap jawaban; bandingkan dengan jawaban acuan tanpa menyalinnya sebagai naskah.\n' +
+        '4) Dua kekuatan spesifik dan tiga pola kelemahan paling berulang (kutip contoh jawaban saya).\n' +
+        '5) Tanda merah yang muncul, termasuk inkonsistensi dengan berkas.\n' +
+        '6) Fakta yang harus saya verifikasi sebelum sesi berikutnya.\n' +
+        '7) Tiga pertanyaan dengan jawaban paling lemah untuk diulang, dan rencana latihan 3 hari.\n' +
+        '8) Skor akhir keseluruhan (0-100) dan prediksi hasil: Lulus / Borderline / Tidak Lulus.',
+      evalDisplay: '⏹ Saya minta wawancara diakhiri. Mohon berikan evaluasi dan skor.',
+      noVoice: 'Tidak ditemukan suara Bahasa Indonesia di browser ini. Gunakan Google Chrome / Microsoft Edge untuk suara yang lebih baik.'
+    },
+    en: {
+      stt: 'en-GB',
+      ttsPrefix: 'en',
+      ttsFallbackLang: 'en-GB',
+      instruction:
+        '\n\nADDITIONAL FORMAT RULES:\n' +
+        '- Conduct the entire interview in formal English.\n' +
+        '- Your responses will be read aloud by text-to-speech, so use natural, concise spoken sentences (max ~80 words per turn), no markdown, no emoji, no bullet lists.\n' +
+        '- Start each turn with the role of the panelist asking, e.g. "Psychologist:", "Academic:", or "LPDP Panelist:". Rotate naturally between panelists.\n' +
+        '- The candidate\'s answers come from speech-to-text and may contain transcription errors; infer the intended meaning without commenting on the errors.\n' +
+        '- Exception: for the final evaluation you may be longer and use simple markdown (headings and bullet points).',
+      startMsg: (mode) =>
+        `I am an LPDP scholarship candidate applying for the MSc Artificial Intelligence at the University of Edinburgh. I am ready for: ${mode}. Please begin the interview: introduce the panel very briefly, then ask the first question.`,
+      evalMsg:
+        'I would like to end the interview now. Please give a sharp and objective final evaluation report (use simple markdown) with this structure:\n' +
+        '1) Score from each panelist (Psychologist, Academic, LPDP Panelist) on a 0-100 scale with brief reasoning.\n' +
+        '2) Seven-dimension rubric scores (Structure, Evidence, Consistency with documents, Composure and tone, Link to contribution, Technical depth, Humility) on a 1-5 scale, each with a one-sentence reason.\n' +
+        '3) The questions asked with their question-bank IDs (if any) and a brief assessment of each answer; compare with the reference answers without copying them as a script.\n' +
+        '4) Two specific strengths and the three most recurring weakness patterns (quote examples of my answers).\n' +
+        '5) Red flags that appeared, including inconsistencies with my documents.\n' +
+        '6) Facts I must verify before the next session.\n' +
+        '7) The three questions with the weakest answers to repeat, and a 3-day practice plan.\n' +
+        '8) Overall final score (0-100) and predicted outcome: Pass / Borderline / Fail.',
+      evalDisplay: '⏹ I would like to end the interview. Please give the evaluation and score.',
+      noVoice: 'No English voice found in this browser.'
+    }
+  };
+
+  const API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/';
+  const STORAGE_KEY = 'lpdp-mock-settings-v1';
+  const REQUEST_TIMEOUT_MS = 90000;
+
+  // ===================== DOM =====================
+  const $ = (id) => document.getElementById(id);
+  const els = {
+    apiKey: $('apiKey'), toggleKey: $('toggleKey'), rememberKey: $('rememberKey'),
+    lang: $('lang'), model: $('model'), customModel: $('customModel'), voice: $('voice'), voiceWarn: $('voiceWarn'),
+    rate: $('rate'), rateVal: $('rateVal'), ttsToggle: $('ttsToggle'), sttWarn: $('sttWarn'),
+    statusDot: $('statusDot'), statusText: $('statusText'), timer: $('timer'), qCount: $('qCount'),
+    chatLog: $('chatLog'), emptyState: $('emptyState'),
+    startBtn: $('startBtn'), micBtn: $('micBtn'), micLabel: $('micLabel'), endBtn: $('endBtn'),
+    textForm: $('textForm'), textInput: $('textInput'), sendBtn: $('sendBtn'),
+    stopTtsBtn: $('stopTtsBtn'), downloadBtn: $('downloadBtn'), toast: $('toast'),
+    kbStatus: $('kbStatus'), kbReload: $('kbReload'), kbFile: $('kbFile'), kbPickLabel: $('kbPickLabel'), kbClear: $('kbClear'),
+    sessionMode: $('sessionMode'), focusCat: $('focusCat'), focusWrap: $('focusWrap'), sensitiveNote: $('sensitiveNote'),
+    zoomBtn: $('zoomBtn'), zoomView: $('zoomView'), zRec: $('zRec'), zTimer: $('zTimer'), zCaption: $('zCaption'),
+    zTileSelf: $('zTile-self'), zSelfVideo: $('zSelfVideo'), zSelfAvatar: $('zSelfAvatar'),
+    zChatPanel: $('zChatPanel'), zChatClose: $('zChatClose'), zChatBody: $('zChatBody'), zFormSlot: $('zFormSlot'),
+    zMicBtn: $('zMicBtn'), zMicIcon: $('zMicIcon'), zMicLabel: $('zMicLabel'), zCamBtn: $('zCamBtn'), zCamIcon: $('zCamIcon'), zCamLabel: $('zCamLabel'),
+    micMode: $('micMode'),
+    zStartBtn: $('zStartBtn'), zStartLabel: $('zStartLabel'), zChatBtn: $('zChatBtn'), zUnread: $('zUnread'), zEndBtn: $('zEndBtn'), zExitBtn: $('zExitBtn')
+  };
+
+  // ===================== STATE =====================
+  const state = {
+    phase: 'idle',        // idle | active | ended
+    busy: false,          // waiting for Gemini
+    history: [],          // Gemini contents: [{role:'user'|'model', parts:[{text}]}]
+    transcript: [],       // for download: {who, text, time}
+    holding: false,       // user is holding the mic button
+    recognizing: false,   // recognition session is running
+    discardSpeech: false, // drop the current STT result
+    finalText: '',
+    interimText: '',
+    speaking: false,
+    questionCount: 0,
+    startTime: 0,
+    timerId: null,
+    sessionId: 0,         // invalidates in-flight requests on restart
+    elapsedMs: 0,         // interview duration (kept when paused/ended/restored)
+    listenStart: 0,       // when the current answer recording started
+    busyNote: ''          // e.g. "retrying in 20s" while waiting for Gemini
+  };
+
+  // ===================== UTILITIES =====================
+  const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const curLang = () => (LANG[els.lang.value] ? els.lang.value : 'id');
+  const modelName = () => (els.model.value === '__custom' ? els.customModel.value.trim() : els.model.value);
+  const syncCustomModel = () => els.customModel.classList.toggle('hidden', els.model.value !== '__custom');
+  const nowTime = () => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+  let toastTimer = null;
+  function toast(msg, ms = 4500) {
+    els.toast.textContent = msg;
+    els.toast.classList.remove('hidden');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => els.toast.classList.add('hidden'), ms);
+  }
+
+  function renderInline(s) {
+    return escapeHtml(s)
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/(^|[^*])\*(?!\s)([^*]+?)\*/g, '$1<em>$2</em>');
+  }
+
+  // Minimal, safe markdown renderer (escapes HTML first)
+  function renderMarkdown(md) {
+    const lines = String(md).replace(/\r\n/g, '\n').split('\n');
+    let html = '';
+    let listType = null;
+    const closeList = () => { if (listType) { html += `</${listType}>`; listType = null; } };
+    for (const raw of lines) {
+      const line = raw.trim();
+      let m;
+      if (!line) { closeList(); continue; }
+      if ((m = line.match(/^#{1,6}\s+(.*)$/))) {
+        closeList();
+        html += `<h4>${renderInline(m[1])}</h4>`;
+      } else if ((m = line.match(/^[-*•]\s+(.*)$/))) {
+        if (listType !== 'ul') { closeList(); html += '<ul>'; listType = 'ul'; }
+        html += `<li>${renderInline(m[1])}</li>`;
+      } else if ((m = line.match(/^\d+[.)]\s+(.*)$/))) {
+        if (listType !== 'ol') { closeList(); html += '<ol>'; listType = 'ol'; }
+        html += `<li>${renderInline(m[1])}</li>`;
+      } else {
+        closeList();
+        html += `<p>${renderInline(line)}</p>`;
+      }
+    }
+    closeList();
+    return html;
+  }
+
+  function stripMarkdown(md) {
+    return String(md)
+      .replace(/```[\s\S]*?```/g, ' ')
+      .replace(/`([^`]*)`/g, '$1')
+      .replace(/^#{1,6}\s+/gm, '')
+      .replace(/^\s*[-*•]\s+/gm, '')
+      .replace(/\*\*(.+?)\*\*/g, '$1')
+      .replace(/\*([^*]+)\*/g, '$1')
+      .replace(/__(.+?)__/g, '$1')
+      .replace(/[*_#>|]/g, ' ')
+      .replace(/\[(.*?)\]\((.*?)\)/g, '$1')
+      .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '')
+      .replace(/\n{2,}/g, '. ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  // Split long text into chunks (Chrome cuts off long utterances ~15s)
+  function chunkText(text, max = 180) {
+    const sentences = text.match(/[^.!?…;:\n]+[.!?…;:]*\s*/g) || [text];
+    const chunks = [];
+    let buf = '';
+    const pushPiece = (piece) => {
+      piece = piece.trim();
+      if (!piece) return;
+      if ((buf + ' ' + piece).trim().length <= max) {
+        buf = (buf + ' ' + piece).trim();
+      } else {
+        if (buf) chunks.push(buf);
+        if (piece.length <= max) { buf = piece; return; }
+        // very long sentence: split by words
+        buf = '';
+        for (const w of piece.split(/\s+/)) {
+          if ((buf + ' ' + w).trim().length > max && buf) { chunks.push(buf); buf = w; }
+          else buf = (buf + ' ' + w).trim();
+        }
+      }
+    };
+    sentences.forEach(pushPiece);
+    if (buf) chunks.push(buf);
+    return chunks;
+  }
+
+  // ===================== SETTINGS PERSISTENCE =====================
+  function loadSettings() {
+    try {
+      const s = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+      if (s.lang && LANG[s.lang]) els.lang.value = s.lang;
+      if (s.model && [...els.model.options].some((o) => o.value === s.model)) els.model.value = s.model;
+      if (typeof s.customModel === 'string') els.customModel.value = s.customModel;
+      syncCustomModel();
+      if (typeof s.rate === 'number') els.rate.value = String(s.rate);
+      if (typeof s.tts === 'boolean') els.ttsToggle.checked = s.tts;
+      if (s.micMode === 'hold' || s.micMode === 'toggle') els.micMode.value = s.micMode;
+      else if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) els.micMode.value = 'toggle';
+      if (s.sessionMode && [...els.sessionMode.options].some((o) => o.value === s.sessionMode)) els.sessionMode.value = s.sessionMode;
+      if (s.focusCat && [...els.focusCat.options].some((o) => o.value === s.focusCat)) els.focusCat.value = s.focusCat;
+      if (s.apiKey) { els.apiKey.value = s.apiKey; els.rememberKey.checked = true; }
+      return s;
+    } catch { return {}; }
+  }
+  function saveSettings() {
+    try {
+      const s = {
+        lang: els.lang.value, model: els.model.value, customModel: els.customModel.value.trim(), rate: parseFloat(els.rate.value),
+        tts: els.ttsToggle.checked, voice: els.voice.value,
+        sessionMode: els.sessionMode.value, focusCat: els.focusCat.value, micMode: els.micMode.value
+      };
+      if (els.rememberKey.checked) s.apiKey = els.apiKey.value.trim();
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+    } catch { /* storage unavailable */ }
+  }
+
+  // ===================== UI =====================
+  function setStatus(text, color = 'slate') {
+    const colors = {
+      slate: 'bg-slate-300', green: 'bg-emerald-400', red: 'bg-red-500 animate-pulse',
+      amber: 'bg-amber-400 animate-pulse', blue: 'bg-sky-400 animate-pulse'
+    };
+    els.statusDot.className = 'w-2.5 h-2.5 rounded-full ' + (colors[color] || colors.slate);
+    els.statusText.textContent = text;
+  }
+
+  function refreshStatus() {
+    computeStatus();
+    updateZoomUI();
+  }
+
+  function computeStatus() {
+    if (state.holding) return setStatus('Mendengarkan…', 'red');
+    if (state.busy) return setStatus('Panel sedang berpikir…', 'amber');
+    if (state.speaking) return setStatus('Panel berbicara…', 'blue');
+    if (state.phase === 'active') return setStatus('Giliran Anda menjawab', 'green');
+    if (state.phase === 'ended') return setStatus('Wawancara selesai', 'slate');
+    setStatus('Belum dimulai', 'slate');
+  }
+
+  function updateControls() {
+    const active = state.phase === 'active';
+    els.micBtn.disabled = !active || state.busy || !recognition;
+    els.endBtn.disabled = !active || state.busy;
+    els.textInput.disabled = !active || state.busy;
+    els.sendBtn.disabled = !active || state.busy;
+    els.startBtn.disabled = state.busy && active;
+    els.startBtn.textContent = state.phase === 'idle' ? '▶ Mulai Wawancara' : '↻ Mulai Ulang';
+    els.downloadBtn.disabled = state.transcript.length === 0;
+    els.stopTtsBtn.classList.toggle('hidden', !state.speaking);
+    // Knowledge base & session mode are fixed while an interview is running
+    els.sessionMode.disabled = active;
+    els.focusCat.disabled = active;
+    els.kbReload.disabled = active;
+    els.kbClear.disabled = active || !(kb.knowledge || kb.protocol);
+    els.kbFile.disabled = active;
+    els.kbPickLabel.classList.toggle('opacity-40', active);
+    els.kbPickLabel.classList.toggle('pointer-events-none', active);
+    refreshStatus();
+  }
+
+  function syncModeUI() {
+    const focus = els.sessionMode.value === 'focus';
+    els.focusWrap.classList.toggle('hidden', !focus);
+    els.sensitiveNote.classList.toggle('hidden', !(focus && els.focusCat.value === 'S'));
+  }
+
+  function scrollToBottom() {
+    els.chatLog.scrollTop = els.chatLog.scrollHeight;
+  }
+
+  function hideEmptyState() {
+    if (els.emptyState && els.emptyState.parentNode) els.emptyState.remove();
+  }
+
+  function addMessage(who, text, opts = {}) {
+    hideEmptyState();
+    const time = opts.time || nowTime();
+    const wrap = document.createElement('div');
+    if (who === 'system') {
+      wrap.className = 'flex justify-center';
+      wrap.innerHTML = `<div class="text-xs text-slate-500 bg-slate-200/70 rounded-full px-3 py-1">${escapeHtml(text)}</div>`;
+    } else {
+      const isUser = who === 'user';
+      wrap.className = 'flex ' + (isUser ? 'justify-end' : 'justify-start');
+      const bubbleCls = isUser
+        ? 'bg-indigo-600 text-white rounded-2xl rounded-br-sm'
+        : (opts.isEval ? 'bg-emerald-50 border border-emerald-300 text-slate-800 rounded-2xl rounded-bl-sm'
+                       : 'bg-white border border-slate-200 text-slate-800 rounded-2xl rounded-bl-sm');
+      const label = isUser ? '🧑‍🎓 Anda' : (opts.isEval ? '📊 Evaluasi Panel' : '👥 Panel LPDP');
+      const body = isUser ? `<p>${escapeHtml(text)}</p>` : renderMarkdown(text);
+      wrap.innerHTML = `
+        <div class="max-w-[85%] ${bubbleCls} px-4 py-2.5 shadow-sm">
+          <div class="flex items-center justify-between gap-3 text-[11px] mb-1 ${isUser ? 'text-indigo-200' : 'text-slate-400'}">
+            <span class="font-semibold">${label}</span><span>${time}</span>
+          </div>
+          <div class="msg-body text-sm leading-relaxed">${body}</div>
+          ${!isUser ? '<button type="button" class="replay mt-1 text-[11px] text-indigo-600 hover:underline">🔊 Putar ulang</button>' : ''}
+        </div>`;
+      if (!isUser) {
+        wrap.querySelector('.replay').addEventListener('click', () => speak(text, true));
+      }
+      state.transcript.push({ who: isUser ? 'Kandidat' : (opts.isEval ? 'Evaluasi Panel' : 'Panel'), text, time });
+    }
+    els.chatLog.appendChild(wrap);
+    scrollToBottom();
+    if (zoom.on && !zoom.chatOpen && who !== 'system') { zoom.unread++; renderUnread(); }
+    updateControls();
+    return wrap;
+  }
+
+  function addError(message, onRetry) {
+    hideEmptyState();
+    const wrap = document.createElement('div');
+    wrap.className = 'flex justify-center';
+    wrap.innerHTML = `
+      <div class="max-w-[90%] bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-2">
+        <b>⚠ Gagal menghubungi Gemini:</b> <span class="msg"></span>
+        ${onRetry ? '<button type="button" class="retry ml-2 underline font-semibold">Coba lagi</button>' : ''}
+      </div>`;
+    wrap.querySelector('.msg').textContent = message;
+    if (onRetry) {
+      wrap.querySelector('.retry').addEventListener('click', () => {
+        if (state.busy) return;
+        wrap.remove();
+        onRetry();
+      });
+    }
+    els.chatLog.appendChild(wrap);
+    scrollToBottom();
+  }
+
+  let typingEl = null;
+  function showTyping() {
+    hideTyping();
+    hideEmptyState();
+    typingEl = document.createElement('div');
+    typingEl.className = 'flex justify-start';
+    typingEl.innerHTML = '<div class="bg-white border border-slate-200 rounded-2xl rounded-bl-sm px-4 py-3 text-slate-400 shadow-sm"><span class="dot-typing"><span></span><span></span><span></span></span><span class="typing-note ml-2 text-xs text-amber-600"></span></div>';
+    els.chatLog.appendChild(typingEl);
+    scrollToBottom();
+  }
+  function hideTyping() { if (typingEl) { typingEl.remove(); typingEl = null; } }
+  function setBusyNote(text) {
+    state.busyNote = text || '';
+    const note = typingEl && typingEl.querySelector('.typing-note');
+    if (note) note.textContent = state.busyNote;
+    updateZoomUI();
+  }
+
+  let liveEl = null;
+  function showLiveBubble() {
+    removeLiveBubble();
+    hideEmptyState();
+    liveEl = document.createElement('div');
+    liveEl.className = 'flex justify-end';
+    liveEl.innerHTML = `
+      <div class="max-w-[85%] bg-indigo-100 border border-indigo-300 text-indigo-900 rounded-2xl rounded-br-sm px-4 py-2.5 shadow-sm">
+        <div class="live-head text-[11px] mb-1 text-indigo-500 font-semibold tabular-nums">🎙️ Mendengarkan… 0:00</div>
+        <div class="live-text text-sm leading-relaxed italic text-indigo-400">(mulai bicara)</div>
+      </div>`;
+    els.chatLog.appendChild(liveEl);
+    scrollToBottom();
+  }
+  function updateLiveBubble() {
+    updateZoomUI();
+    if (!liveEl) return;
+    const clock = answerClock();
+    const head = liveEl.querySelector('.live-head');
+    head.className = 'live-head text-[11px] mb-1 font-semibold tabular-nums ' +
+      (clock.tone === 'red' ? 'text-red-600' : clock.tone === 'amber' ? 'text-amber-600' : 'text-indigo-500');
+    head.textContent = `🎙️ Mendengarkan… ${clock.label}` + (clock.note ? ` · ${clock.note}` : '');
+    const box = liveEl.querySelector('.live-text');
+    const fin = state.finalText.trim();
+    const intr = state.interimText.trim();
+    if (!fin && !intr) { box.textContent = '(mulai bicara)'; box.className = 'live-text text-sm leading-relaxed italic text-indigo-400'; return; }
+    box.className = 'live-text text-sm leading-relaxed';
+    box.innerHTML = `${escapeHtml(fin)} <span class="italic text-indigo-400">${escapeHtml(intr)}</span>`;
+    scrollToBottom();
+  }
+  function removeLiveBubble() { if (liveEl) { liveEl.remove(); liveEl = null; } }
+
+  function clearChat() {
+    els.chatLog.innerHTML = '';
+    typingEl = null; liveEl = null;
+    state.transcript = [];
+  }
+
+  function renderClock(ms) {
+    const sec = Math.max(0, Math.floor(ms / 1000));
+    els.timer.textContent = els.zTimer.textContent =
+      `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(sec % 60).padStart(2, '0')}`;
+  }
+  function startTimer(offsetMs = 0) {
+    stopTimer();
+    state.startTime = Date.now() - offsetMs;
+    state.elapsedMs = offsetMs;
+    renderClock(offsetMs);
+    state.timerId = setInterval(() => {
+      state.elapsedMs = Date.now() - state.startTime;
+      renderClock(state.elapsedMs);
+    }, 1000);
+  }
+  function stopTimer() {
+    if (!state.timerId) return;
+    clearInterval(state.timerId);
+    state.timerId = null;
+    state.elapsedMs = Date.now() - state.startTime;
+  }
+
+  // Answer length guide (protokol: 30-90 detik; potong sekitar 2 menit)
+  const MAX_ANSWER_SEC = 180;
+  function answerClock() {
+    const sec = state.holding && state.listenStart ? Math.floor((Date.now() - state.listenStart) / 1000) : 0;
+    const label = `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
+    if (sec >= 120) return { sec, label, tone: 'red', note: 'terlalu panjang, segera simpulkan' };
+    if (sec >= 90) return { sec, label, tone: 'amber', note: 'lewat 90 detik, mulai simpulkan' };
+    return { sec, label, tone: 'ok', note: '' };
+  }
+
+  // ===================== SESSION AUTOSAVE (browser only) =====================
+  const SESSION_KEY = 'lpdp-mock-session-v1';
+  function saveSession() {
+    if (!state.history.length) return;
+    try {
+      localStorage.setItem(SESSION_KEY, JSON.stringify({
+        v: 1, savedAt: Date.now(), phase: state.phase, history: state.history, transcript: state.transcript,
+        questionCount: state.questionCount, elapsedMs: state.timerId ? Date.now() - state.startTime : state.elapsedMs,
+        sessionMode: els.sessionMode.value, focusCat: els.focusCat.value, lang: els.lang.value
+      }));
+    } catch { /* storage full/blocked: autosave is best-effort */ }
+  }
+  function clearSavedSession() {
+    try { localStorage.removeItem(SESSION_KEY); } catch { /* ignore */ }
+  }
+  function loadSavedSession() {
+    try {
+      const d = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null');
+      if (d && d.v === 1 && Array.isArray(d.history) && d.history.length && Array.isArray(d.transcript)) return d;
+    } catch { /* ignore */ }
+    return null;
+  }
+
+  function restoreSession(d) {
+    cancelListening();
+    stopSpeaking();
+    stopTimer();
+    state.sessionId++;
+    state.busy = false;
+    if (d.lang && LANG[d.lang]) { els.lang.value = d.lang; populateVoices(); }
+    if ([...els.sessionMode.options].some((o) => o.value === d.sessionMode)) els.sessionMode.value = d.sessionMode;
+    if ([...els.focusCat.options].some((o) => o.value === d.focusCat)) els.focusCat.value = d.focusCat;
+    syncModeUI();
+    saveSettings();
+    clearChat();
+    state.phase = 'idle'; // no unread/zoom side effects while re-rendering
+    state.history = d.history.filter((h) => h && (h.role === 'user' || h.role === 'model') && Array.isArray(h.parts));
+    addMessage('system', `Sesi dipulihkan · disimpan ${new Date(d.savedAt).toLocaleString()}`);
+    d.transcript.forEach((t) => {
+      if (!t || typeof t.text !== 'string') return;
+      addMessage(t.who === 'Kandidat' ? 'user' : 'model', t.text, { isEval: t.who === 'Evaluasi Panel', time: t.time });
+    });
+    state.questionCount = Number(d.questionCount) || 0;
+    els.qCount.textContent = String(state.questionCount);
+    state.phase = d.phase === 'ended' ? 'ended' : 'active';
+    if (state.phase === 'active') startTimer(Number(d.elapsedMs) || 0);
+    else { state.elapsedMs = Number(d.elapsedMs) || 0; renderClock(state.elapsedMs); }
+    updateControls();
+    renderKbStatus();
+    focusChatOnSmallScreens();
+    toast(state.phase === 'active' ? 'Sesi dipulihkan. Lanjutkan menjawab pertanyaan terakhir panel.' : 'Sesi yang sudah selesai dipulihkan.');
+  }
+
+  function offerResume() {
+    const d = loadSavedSession();
+    if (!d) return;
+    const banner = document.createElement('div');
+    banner.className = 'flex justify-center';
+    const msgs = d.transcript.length;
+    const status = d.phase === 'ended' ? 'sudah dievaluasi' : 'belum selesai';
+    banner.innerHTML = `
+      <div class="w-full max-w-md bg-white border border-indigo-200 rounded-xl p-4 text-sm shadow-sm text-center">
+        <p class="font-semibold text-slate-700">💾 Ada sesi wawancara tersimpan</p>
+        <p class="text-xs text-slate-500 mt-1">${msgs} pesan · ${status} · ${escapeHtml(new Date(d.savedAt).toLocaleString())}</p>
+        <div class="mt-3 flex gap-2 justify-center">
+          <button type="button" class="resume px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700">Lanjutkan sesi</button>
+          <button type="button" class="discard px-3 py-1.5 rounded-lg border border-slate-300 text-xs hover:bg-slate-50">Buang</button>
+        </div>
+      </div>`;
+    banner.querySelector('.resume').addEventListener('click', () => {
+      if (state.phase === 'active' && !confirm('Ganti wawancara yang sedang berjalan dengan sesi tersimpan?')) return;
+      banner.remove();
+      restoreSession(d);
+    });
+    banner.querySelector('.discard').addEventListener('click', () => {
+      clearSavedSession();
+      banner.remove();
+    });
+    els.chatLog.prepend(banner);
+  }
+
+  // ===================== KNOWLEDGE BASE (folder raw/) =====================
+  const KB_PATHS = {
+    knowledge: 'raw/LPDP_Mock_Interviewer_Knowledge_Base_Rega.md',
+    protocol: 'raw/Sistem_Prompt_Mock_Interviewer_LPDP.md'
+  };
+  const KB_CACHE_KEY = 'lpdp-mock-kb-v1';
+  const kb = { knowledge: '', protocol: '', source: '', names: [] };
+  let lastUsage = null;
+
+  const CATEGORY_NAMES = {
+    A: 'Pembuka dan Profil Diri', B: 'Motivasi, Kampus dan Program Studi', C: 'Kelayakan Akademik dan Riset (ALFANDA)',
+    D: 'Kecocokan Skema STEM Industri Strategis dan Isu Nasional', E: 'Rencana Kontribusi dan Pengabdian',
+    F: 'Nilai LPDP, Dana Negara dan Integritas', G: 'Psikologi, Ketahanan dan Karakter', H: 'Kepemimpinan dan Organisasi',
+    I: 'Pengalaman Kerja dan Fokus', J: 'Serangan Khusus pada Berkas (Konsistensi dan Integritas)', K: 'Isu Terkini dan Wawasan',
+    L: 'Rencana Cadangan, Finansial dan Logistik', M: 'Penutup', N: 'Mini-Set Wawancara dalam Bahasa Inggris',
+    S: 'Pertanyaan Sensitif (agama, keluarga, domisili)'
+  };
+
+  function sessionMode() {
+    const mode = els.sessionMode.value;
+    const cat = CATEGORY_NAMES[els.focusCat.value] ? els.focusCat.value : 'A';
+    const sensitive = mode === 'focus' && cat === 'S';
+    let label, instruction;
+    if (mode === 'focus') {
+      label = `Sesi fokus Kategori ${cat} (${CATEGORY_NAMES[cat]})`;
+      instruction = `MODE SESI: Sesi fokus Kategori ${cat}: ${CATEGORY_NAMES[cat]}. Ajukan 8 sampai 10 pertanyaan dari kategori ini, masing-masing dengan probe lanjutan bila jawaban kurang bukti.` +
+        (cat === 'N' ? ' Kategori N dilakukan dalam bahasa Inggris.' : '');
+    } else if (mode === 'audit') {
+      label = 'Sesi audit berkas';
+      instruction = 'MODE SESI: Sesi audit berkas. Gunakan Kategori J secara penuh, ditambah probe dari Temuan Audit Berkas (Bagian 4).';
+    } else if (mode === 'pressure') {
+      label = 'Sesi tekanan';
+      instruction = 'MODE SESI: Sesi tekanan. Gunakan G13 dan pertanyaan level EXTRA; nada netral tetapi menekan. Pada pertanyaan menekan, ulang keberatan satu kali.';
+    } else {
+      label = 'Sesi penuh (45 menit)';
+      instruction = 'MODE SESI: Sesi penuh (45 menit). Ikuti alur A (3 pertanyaan) → B (3) → C (3) → E (3) → D (2) → J (4) → G (3) → F (2) → L (2) → M (2), dan selipkan 2 pertanyaan tekanan.';
+    }
+    const sensitiveRule = sensitive
+      ? 'MODE SENSITIF AKTIF atas permintaan kandidat. Nilai hanya cara kandidat menjawab (ketenangan, kejujuran, batas yang sopan), bukan keyakinan atau latar pribadinya. Hentikan segera bila kandidat meminta berhenti.'
+      : 'MODE SENSITIF TIDAK AKTIF: jangan menanyakan agama, keluarga, orang tua, atau alamat domisili kandidat.';
+    return { label, instruction, sensitiveRule, sensitive };
+  }
+
+  // Remove a markdown section (heading line + body until the next heading of same/higher level)
+  function removeSection(md, headingRe) {
+    const out = [];
+    let skipLevel = 0;
+    for (const line of md.split('\n')) {
+      const m = line.match(/^(#{1,6})\s/);
+      if (skipLevel && m && m[1].length <= skipLevel) skipLevel = 0;
+      if (!skipLevel && m && headingRe.test(line)) { skipLevel = m[1].length; continue; }
+      if (!skipLevel) out.push(line);
+    }
+    return out.join('\n');
+  }
+
+  function prepareKnowledge(md, sensitive) {
+    let out = String(md).replace(/\r\n/g, '\n');
+    out = removeSection(out, /^##\s+10\.\s/); // daftar sumber: tidak diperlukan saat wawancara (hemat token)
+    if (!sensitive) {
+      out = removeSection(out, /^###\s+2\.10\b/);      // faktor pribadi sensitif
+      out = removeSection(out, /^###\s+Kategori S\b/); // bank pertanyaan sensitif
+    }
+    return out.trim();
+  }
+
+  const PRIORITY_RULES = [
+    'Persona utama di bagian paling atas (tajam, kritis, objektif, tanpa pujian basa-basi) tetap berlaku. Jika protokol menyebut "akui jawaban yang kuat", lakukan maksimal satu frasa faktual tanpa pujian, lalu lanjut bertanya.',
+    'Ini simulasi wawancara SUARA secara real-time. JANGAN memberi umpan balik, skor, atau jawaban acuan selama sesi berjalan. Simpan seluruh penilaian (rubrik tujuh dimensi, Bagian 6.2) untuk evaluasi akhir ketika kandidat meminta wawancara diakhiri.',
+    'Ambil pertanyaan dari Bank Pertanyaan (Bagian 9) dan probe dari Temuan Audit Berkas (Bagian 4) bila relevan, tetapi sampaikan dengan kalimat lisan yang natural. Jangan menyebut ID pertanyaan saat bertanya. Jangan pernah membacakan atau membocorkan isi "Jawaban acuan", "Kriteria jawaban kuat", atau "Mengapa efektif".',
+    'Gunakan fakta di Profil Kandidat dan Temuan Audit Berkas untuk menguji konsistensi. Jangan mengarang fakta di luar basis pengetahuan; untuk bagian bertanda [ISI] atau "Hal yang belum diketahui", tanyakan langsung ke kandidat.',
+    'Ingat ID pertanyaan yang sudah diajukan agar tidak mengulang, dan sebutkan ID tersebut hanya di evaluasi akhir.'
+  ];
+
+  function buildSystemPrompt() {
+    const mode = sessionMode();
+    const hasKb = !!(kb.knowledge || kb.protocol);
+    let p = SYSTEM_PROMPT;
+    // Long, stable context first (helps Gemini implicit caching); per-session rules last
+    if (kb.protocol) p += '\n\n=== PROTOKOL SESI (dari file Sistem_Prompt_Mock_Interviewer_LPDP.md) ===\n' + kb.protocol.trim();
+    if (kb.knowledge) {
+      p += '\n\n=== BASIS PENGETAHUAN KANDIDAT ===\n' + prepareKnowledge(kb.knowledge, mode.sensitive) + '\n=== AKHIR BASIS PENGETAHUAN ===';
+    }
+    p += '\n\n=== ATURAN PRIORITAS SIMULASI ===\n' +
+      (hasKb ? PRIORITY_RULES : PRIORITY_RULES.slice(0, 2)).map((r) => '- ' + r).join('\n');
+    if (hasKb) p += '\n- ' + mode.instruction;
+    p += '\n- ' + mode.sensitiveRule;
+    p += LANG[curLang()].instruction;
+    return p;
+  }
+
+  const fmtNum = (n) => Number(n || 0).toLocaleString('id-ID');
+
+  function renderKbStatus() {
+    const loaded = !!(kb.knowledge || kb.protocol);
+    els.kbStatus.className = 'text-xs rounded-lg px-3 py-2 border ' +
+      (loaded ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-amber-50 text-amber-800 border-amber-200');
+    if (!loaded) {
+      els.kbStatus.textContent = '⚠ Belum dimuat. Panel hanya memakai system prompt umum.';
+      return;
+    }
+    const estTokens = Math.round(buildSystemPrompt().length / 4);
+    const parts = [];
+    parts.push(`<b>✅ Dimuat</b> dari ${escapeHtml(kb.source)}`);
+    parts.push(`<div class="mt-1 break-all">${kb.names.map((n) => '• ' + escapeHtml(n)).join('<br>')}</div>`);
+    if (!kb.knowledge) parts.push('<div class="mt-1 text-amber-700">⚠ File basis pengetahuan belum ada (hanya protokol).</div>');
+    if (!kb.protocol) parts.push('<div class="mt-1 text-amber-700">⚠ File Sistem_Prompt belum ada (hanya basis pengetahuan).</div>');
+    parts.push(`<div class="mt-1 text-slate-500">Konteks ≈ ${fmtNum(estTokens)} token per giliran (estimasi)</div>`);
+    if (lastUsage) {
+      parts.push(`<div class="text-slate-500">Giliran terakhir: ${fmtNum(lastUsage.promptTokenCount)} token input` +
+        (lastUsage.cachedContentTokenCount ? `, ${fmtNum(lastUsage.cachedContentTokenCount)} dari cache` : '') + '</div>');
+    }
+    els.kbStatus.innerHTML = parts.join('');
+  }
+
+  function showUsage(usage) {
+    lastUsage = usage;
+    renderKbStatus();
+  }
+
+  function setKb(data, persist) {
+    kb.knowledge = data.knowledge || '';
+    kb.protocol = data.protocol || '';
+    kb.source = data.source || '';
+    kb.names = data.names || [];
+    lastUsage = null;
+    if (persist) {
+      try { localStorage.setItem(KB_CACHE_KEY, JSON.stringify(kb)); }
+      catch { toast('Knowledge base dimuat, tetapi tidak dapat disimpan di browser (penyimpanan penuh/diblokir).'); }
+    }
+    renderKbStatus();
+    updateControls();
+  }
+
+  function clearKb() {
+    try { localStorage.removeItem(KB_CACHE_KEY); } catch { /* ignore */ }
+    setKb({}, false);
+    toast('Knowledge base dihapus dari aplikasi dan browser ini.');
+  }
+
+  async function fetchText(url) {
+    const r = await fetch(url, { cache: 'no-store' });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    return r.text();
+  }
+
+  async function loadKbFromFolder(silent) {
+    if (location.protocol === 'file:') {
+      if (!silent) toast('Halaman dibuka via file://, browser memblokir pembacaan folder raw/. Jalankan lewat http://localhost atau pilih file .md secara manual.', 7000);
+      return false;
+    }
+    const [k, p] = await Promise.allSettled([fetchText(KB_PATHS.knowledge), fetchText(KB_PATHS.protocol)]);
+    const knowledge = k.status === 'fulfilled' ? k.value : '';
+    const protocol = p.status === 'fulfilled' ? p.value : '';
+    if (!knowledge && !protocol) {
+      if (!silent) toast('File di folder raw/ tidak ditemukan. Pastikan server dijalankan dari folder proyek.', 6000);
+      return false;
+    }
+    const names = [];
+    if (knowledge) names.push(KB_PATHS.knowledge);
+    if (protocol) names.push(KB_PATHS.protocol);
+    setKb({ knowledge, protocol, source: 'folder raw/ (otomatis)', names }, false);
+    if (!silent) toast('Knowledge base dimuat dari folder raw/.');
+    return true;
+  }
+
+  function loadKbFromCache() {
+    try {
+      const c = JSON.parse(localStorage.getItem(KB_CACHE_KEY) || 'null');
+      if (c && (c.knowledge || c.protocol)) {
+        setKb({ ...c, source: String(c.source || 'file dipilih').replace(/ \(tersimpan di browser\)$/, '') + ' (tersimpan di browser)' }, false);
+        return true;
+      }
+    } catch { /* ignore */ }
+    return false;
+  }
+
+  async function loadKbFromFiles(fileList) {
+    const files = [...(fileList || [])];
+    if (!files.length) return;
+    const knowledgeParts = [];
+    const names = [];
+    let protocol = '';
+    try {
+      for (const f of files) {
+        if (f.size > 3 * 1024 * 1024) { toast(`File ${f.name} terlalu besar (>3 MB), dilewati.`); continue; }
+        const text = await f.text();
+        names.push(f.name);
+        if (/(sistem|system)[\s_-]*prompt/i.test(f.name)) protocol += (protocol ? '\n\n' : '') + text;
+        else knowledgeParts.push(knowledgeParts.length ? `<!-- file: ${f.name} -->\n${text}` : text);
+      }
+    } catch (e) {
+      toast('Gagal membaca file: ' + e.message);
+      return;
+    }
+    if (!knowledgeParts.length && !protocol) return;
+    setKb({ knowledge: knowledgeParts.join('\n\n'), protocol, source: 'file dipilih', names }, true);
+    toast('Knowledge base dimuat dari file yang dipilih.');
+  }
+
+  // ===================== GEMINI =====================
+  const errDetails = (data) => (data && data.error && Array.isArray(data.error.details) ? data.error.details : []);
+  function retryDelaySec(data) {
+    const info = errDetails(data).find((d) => /RetryInfo$/.test(d['@type'] || ''));
+    const m = info && /([\d.]+)s/.exec(info.retryDelay || '');
+    return m ? Math.ceil(parseFloat(m[1])) : null;
+  }
+  function isDailyQuota(data) {
+    return errDetails(data).some((d) => (d.violations || []).some((v) => /PerDay/i.test(v.quotaId || '')));
+  }
+
+  function friendlyError(status, msg, data) {
+    if (status === 429 && isDailyQuota(data)) return 'Kuota harian gratis untuk model ini habis (429). Ganti model (mis. gemini-flash-lite-latest) atau coba lagi besok.';
+    if (status === 400 && /api key/i.test(msg)) return 'API key tidak valid. Periksa kembali Gemini API Key Anda.';
+    if (status === 403) return 'Akses ditolak (403). Pastikan API key benar dan Generative Language API aktif. ' + msg;
+    if (status === 404) return `Model tidak ditemukan/tidak tersedia (404). Coba pilih model lain. ${msg}`;
+    if (status === 429) return 'Batas kuota/rate limit gratis tercapai (429). Tunggu sekitar 1 menit atau ganti model (mis. gemini-2.5-flash-lite).';
+    if (status >= 500) return `Server Gemini sedang bermasalah (${status}). Coba lagi sebentar. ${msg}`;
+    return msg || `HTTP ${status}`;
+  }
+
+  // Thinking control per model family; dropped automatically if a model rejects it
+  const noThinkingCfg = new Set();
+  function thinkingConfigFor(model) {
+    if (noThinkingCfg.has(model)) return null;
+    if (/^gemini-2\.5-flash/.test(model)) return { thinkingBudget: 0 };        // 2.5 Flash / Flash-Lite: off
+    if (/^gemini-(3|flash-latest|flash-lite-latest)/.test(model)) return { thinkingLevel: 'low' }; // Gemini 3.x
+    return null;
+  }
+
+  const MAX_AUTO_RETRIES = 2;
+  async function waitForRetry(sec, session, reason) {
+    try {
+      for (let left = sec; left > 0; left--) {
+        if (session !== state.sessionId) throw new Error('Dibatalkan.');
+        setBusyNote(`${reason} Mencoba lagi dalam ${left} detik…`);
+        await new Promise((r) => setTimeout(r, 1000));
+      }
+    } finally {
+      if (session === state.sessionId) setBusyNote('');
+    }
+    if (session !== state.sessionId) throw new Error('Dibatalkan.');
+  }
+
+  async function postGemini(model, body) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    try {
+      const res = await fetch(API_BASE + encodeURIComponent(model) + ':generateContent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': els.apiKey.value.trim() },
+        body: JSON.stringify(body),
+        signal: controller.signal
+      });
+      let data = null;
+      try { data = await res.json(); } catch { /* non-JSON */ }
+      return { res, data };
+    } catch (e) {
+      if (e.name === 'AbortError') throw new Error('Waktu permintaan habis (timeout). Periksa koneksi internet Anda.');
+      throw new Error('Tidak dapat terhubung ke server Gemini. Periksa koneksi internet Anda.');
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  async function callGemini(maxOutputTokens) {
+    const model = modelName();
+    const body = {
+      system_instruction: { parts: [{ text: buildSystemPrompt() }] },
+      contents: state.history,
+      generationConfig: { temperature: 0.8, topP: 0.95, maxOutputTokens }
+    };
+    const thinking = thinkingConfigFor(model);
+    if (thinking) body.generationConfig.thinkingConfig = thinking;
+
+    const session = state.sessionId;
+    let res, data, msg;
+    let retries = 0;
+    for (;;) {
+      ({ res, data } = await postGemini(model, body));
+      msg = (data && data.error && data.error.message) || '';
+      // Model doesn't accept this thinking setting -> remember and retry without it
+      if (!res.ok && res.status === 400 && body.generationConfig.thinkingConfig && /thinking/i.test(msg)) {
+        noThinkingCfg.add(model);
+        delete body.generationConfig.thinkingConfig;
+        continue;
+      }
+      // Per-minute rate limit / overloaded server: wait and retry automatically
+      const retriable = res.status === 429 ? !isDailyQuota(data) : (res.status === 500 || res.status === 503);
+      if (!res.ok && retriable && retries < MAX_AUTO_RETRIES) {
+        const hinted = retryDelaySec(data);
+        const wait = hinted != null ? hinted : (res.status === 429 ? 20 : 5) * (retries + 1);
+        if (wait <= 65) {
+          retries++;
+          await waitForRetry(wait, session, res.status === 429 ? 'Batas kuota per menit tercapai.' : 'Server Gemini sibuk.');
+          continue;
+        }
+      }
+      break;
+    }
+
+    if (!res.ok) throw new Error(friendlyError(res.status, msg, data));
+    if (data && data.promptFeedback && data.promptFeedback.blockReason) {
+      throw new Error('Permintaan diblokir oleh filter keamanan: ' + data.promptFeedback.blockReason);
+    }
+    if (data && data.usageMetadata) showUsage(data.usageMetadata);
+    const cand = data && data.candidates && data.candidates[0];
+    const parts = (cand && cand.content && cand.content.parts) || [];
+    const text = parts.filter((p) => typeof p.text === 'string' && !p.thought).map((p) => p.text).join('').trim();
+    if (!text) {
+      const reason = cand && cand.finishReason ? ` (finishReason: ${cand.finishReason})` : '';
+      throw new Error('Gemini mengembalikan respons kosong' + reason + '.');
+    }
+    return text;
+  }
+
+  async function sendTurn(text, opts = {}) {
+    text = String(text || '').trim();
+    if (!text || state.busy || state.phase !== 'active') return;
+    if (!els.apiKey.value.trim()) { toast('Masukkan Gemini API Key terlebih dahulu.'); els.apiKey.focus(); return; }
+
+    const session = state.sessionId;
+    stopSpeaking();
+    if (opts.display !== false) addMessage('user', opts.displayText || text);
+
+    state.history.push({ role: 'user', parts: [{ text }] });
+    state.busy = true;
+    showTyping();
+    updateControls();
+
+    try {
+      const reply = await callGemini(opts.isEval ? 16384 : 8192);
+      if (session !== state.sessionId) return; // interview restarted meanwhile
+      state.history.push({ role: 'model', parts: [{ text: reply }] });
+      hideTyping();
+      if (!opts.isEval) {
+        state.questionCount++;
+        els.qCount.textContent = String(state.questionCount);
+      }
+      addMessage('model', reply, { isEval: !!opts.isEval });
+      if (opts.isEval) {
+        state.phase = 'ended';
+        stopTimer();
+        if (zoom.on) setChatOpen(true);
+      }
+      saveSession();
+      speak(reply);
+    } catch (err) {
+      if (session !== state.sessionId) return;
+      hideTyping();
+      // Roll back the user turn so history stays consistent (user/model alternating)
+      const last = state.history[state.history.length - 1];
+      if (last && last.role === 'user') state.history.pop();
+      addError(err.message || String(err), () => sendTurn(text, { ...opts, display: false }));
+    } finally {
+      if (session === state.sessionId) {
+        state.busy = false;
+        state.busyNote = '';
+        updateControls();
+      }
+    }
+  }
+
+  // ===================== TEXT-TO-SPEECH =====================
+  const synth = 'speechSynthesis' in window ? window.speechSynthesis : null;
+  let voices = [];
+  let ttsSession = 0;
+  let utteranceRefs = []; // keep references so Chrome doesn't GC them (lost onend)
+  let savedVoice = '';
+
+  function voicesForLang(code) {
+    const prefix = LANG[code].ttsPrefix;
+    return voices.filter((v) => (v.lang || '').replace('_', '-').toLowerCase().startsWith(prefix));
+  }
+
+  function voiceScore(v, code) {
+    let s = 0;
+    const lang = v.lang.replace('_', '-').toLowerCase();
+    if (/google|natural|online/i.test(v.name)) s += 3;
+    if (code === 'en' && lang === 'en-gb') s += 2;
+    if (code === 'en' && lang === 'en-us') s += 1;
+    if (code === 'id' && lang === 'id-id') s += 1;
+    return s;
+  }
+
+  function rankedVoices(code) {
+    return [...voicesForLang(code)].sort((a, b) => voiceScore(b, code) - voiceScore(a, code));
+  }
+
+  function autoVoice(code) {
+    return rankedVoices(code)[0] || null;
+  }
+
+  // Zoom view + "Otomatis": give each panelist a different voice when the browser has several
+  function voiceFor(speaker) {
+    const base = selectedVoice();
+    if (!zoom.on || els.voice.value) return base;
+    const ranked = rankedVoices(curLang());
+    const good = ranked.filter((v) => /google|natural|online/i.test(v.name));
+    const pool = good.length >= 2 ? good : ranked;
+    if (pool.length < 2) return base;
+    const idx = { lpdp: 0, psy: 1, aca: 2 }[speaker] || 0;
+    return pool[idx % pool.length];
+  }
+
+  function populateVoices() {
+    if (!synth) return;
+    voices = synth.getVoices();
+    const code = curLang();
+    const list = voicesForLang(code);
+    const prev = els.voice.value || savedVoice;
+    els.voice.innerHTML = '<option value="">Otomatis</option>' +
+      list.map((v) => `<option value="${escapeHtml(v.name)}">${escapeHtml(v.name)} (${escapeHtml(v.lang)})</option>`).join('');
+    if (prev && list.some((v) => v.name === prev)) els.voice.value = prev;
+    if (voices.length && !list.length) {
+      els.voiceWarn.textContent = LANG[code].noVoice;
+      els.voiceWarn.classList.remove('hidden');
+    } else {
+      els.voiceWarn.classList.add('hidden');
+    }
+  }
+
+  function selectedVoice() {
+    const code = curLang();
+    const name = els.voice.value;
+    if (name) {
+      const v = voicesForLang(code).find((x) => x.name === name);
+      if (v) return v;
+    }
+    return autoVoice(code);
+  }
+
+  function setSpeaking(on) {
+    state.speaking = on;
+    updateControls();
+  }
+
+  function stopSpeaking() {
+    ttsSession++;
+    utteranceRefs = [];
+    if (synth) synth.cancel();
+    zoom.activeSpeaker = null;
+    zoom.caption = null;
+    if (state.speaking) setSpeaking(false);
+    else updateZoomUI();
+  }
+
+  function speak(text, force = false) {
+    if (!synth) return;
+    if (!force && !els.ttsToggle.checked) return;
+    stopSpeaking();
+    const clean = stripMarkdown(text);
+    if (!clean) return;
+    const segs = splitSpeakers(clean);
+    const items = [];
+    segs.forEach((seg) => {
+      // Zoom view shows who is talking on the tile, so the "Psikolog:" label isn't read aloud there
+      const spoken = zoom.on || !seg.label ? seg.text : `${seg.label}: ${seg.text}`;
+      chunkText(spoken).forEach((c) => items.push({ text: c, speaker: seg.speaker }));
+    });
+    if (!items.length) return;
+    zoom.lastSpeaker = segs[segs.length - 1].speaker;
+    const session = ttsSession;
+    const rate = parseFloat(els.rate.value) || 1;
+
+    // Small delay: Chrome sometimes drops speak() called right after cancel()
+    setTimeout(() => {
+      if (session !== ttsSession) return;
+      items.forEach((it, i) => {
+        const u = new SpeechSynthesisUtterance(it.text);
+        const voice = voiceFor(it.speaker);
+        u.lang = voice ? voice.lang : LANG[curLang()].ttsFallbackLang;
+        if (voice) u.voice = voice;
+        u.rate = rate;
+        u.pitch = zoom.on ? PANELISTS[it.speaker].pitch : 1;
+        u.onstart = () => {
+          if (session !== ttsSession) return;
+          zoom.activeSpeaker = it.speaker;
+          zoom.caption = { who: panelName(it.speaker), text: it.text };
+          if (!state.speaking) setSpeaking(true);
+          else updateZoomUI();
+        };
+        if (i === items.length - 1) {
+          const done = () => {
+            if (session !== ttsSession) return;
+            utteranceRefs = [];
+            zoom.activeSpeaker = null;
+            zoom.caption = null;
+            setSpeaking(false);
+          };
+          u.onend = done;
+          u.onerror = done;
+        }
+        utteranceRefs.push(u);
+        synth.speak(u);
+      });
+    }, 80);
+  }
+
+  // ===================== ZOOM-LIKE MEETING VIEW =====================
+  const ICONS = {
+    mic: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="%C"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v1a7 7 0 0 0 14 0v-1"/><path d="M12 18v4"/></svg>',
+    micOff: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="%C"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v1a7 7 0 0 0 14 0v-1"/><path d="M12 18v4"/><path d="M3 3l18 18"/></svg>',
+    cam: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="%C"><rect x="2" y="6" width="14" height="12" rx="2"/><path d="M16 10l6-3v10l-6-3z"/></svg>',
+    camOff: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="%C"><rect x="2" y="6" width="14" height="12" rx="2"/><path d="M16 10l6-3v10l-6-3z"/><path d="M2 2l20 20"/></svg>'
+  };
+  const icon = (name, cls) => ICONS[name].replace('%C', cls);
+
+  const PANELISTS = {
+    psy: { id: 'Psikolog', en: 'Psychologist', pitch: 1.1 },
+    aca: { id: 'Akademisi', en: 'Academic', pitch: 0.9 },
+    lpdp: { id: 'Panelis LPDP', en: 'LPDP Panelist', pitch: 1.0 }
+  };
+  const panelName = (key) => (PANELISTS[key] ? PANELISTS[key][curLang()] : '');
+  const zoom = { on: false, activeSpeaker: null, caption: null, chatOpen: false, unread: 0, camStream: null, camPending: false, lastSpeaker: 'lpdp' };
+  const chatMarker = document.createComment('chatLog-home');
+  const formMarker = document.createComment('textForm-home');
+
+  // Split a reply into segments by panelist label ("Psikolog:", "Akademisi:", "Panelis LPDP:", ...)
+  const SPEAKER_RE = /((?:Panelis|Perwakilan)\s+LPDP|LPDP\s+(?:Panelist|Representative)|Psikolog|Psychologist|Akademisi|Academician|Academic)(\s*\([^)]{0,40}\))?\s*:/gi;
+  function speakerKey(label) {
+    if (/psik|psych/i.test(label)) return 'psy';
+    if (/akad|academ/i.test(label)) return 'aca';
+    return 'lpdp';
+  }
+  function splitSpeakers(text) {
+    const segs = [];
+    let cur = null;
+    let curLabel = '';
+    let last = 0;
+    let m;
+    SPEAKER_RE.lastIndex = 0;
+    while ((m = SPEAKER_RE.exec(text))) {
+      const prev = m.index === 0 ? ' ' : text[m.index - 1];
+      if (!/[\s.!?"'“(]/.test(prev) || m[0][0] !== m[0][0].toUpperCase()) continue;
+      const before = text.slice(last, m.index).trim();
+      if (before) segs.push({ speaker: cur, label: curLabel, text: before });
+      cur = speakerKey(m[1]);
+      curLabel = m[0].replace(/\s*:$/, '');
+      last = m.index + m[0].length;
+    }
+    const rest = text.slice(last).trim();
+    if (rest) segs.push({ speaker: cur, label: curLabel, text: rest });
+    let fallback = zoom.lastSpeaker || 'lpdp';
+    segs.forEach((sg) => { if (!sg.speaker) sg.speaker = fallback; fallback = sg.speaker; });
+    return segs;
+  }
+
+  function selfName() {
+    const m = kb.knowledge && kb.knowledge.match(/^\s*-\s*Nama:\s*([^,\n.]+)/m);
+    return m ? m[1].trim() : (curLang() === 'en' ? 'Candidate' : 'Kandidat');
+  }
+
+  function renderUnread() {
+    const n = zoom.unread;
+    els.zUnread.textContent = n > 9 ? '9+' : String(n);
+    els.zUnread.classList.toggle('hidden', !n);
+    els.zUnread.classList.toggle('flex', !!n);
+  }
+
+  function setChatOpen(open) {
+    zoom.chatOpen = open;
+    els.zChatPanel.classList.toggle('hidden', !open);
+    els.zChatPanel.classList.toggle('flex', open);
+    if (open) { zoom.unread = 0; scrollToBottom(); }
+    renderUnread();
+  }
+
+  function setTile(tile, { name, active, micOn }) {
+    tile.classList.toggle('zactive', active);
+    tile.querySelector('.zname').textContent = name;
+    tile.querySelector('.zmic').innerHTML = micOn ? icon('mic', 'w-3.5 h-3.5') : icon('micOff', 'w-3.5 h-3.5 text-red-500');
+    tile.querySelector('.zwave').classList.toggle('hidden', !active);
+  }
+
+  function updateZoomUI() {
+    if (!zoom.on) return;
+    const holding = state.holding;
+    Object.keys(PANELISTS).forEach((key) => {
+      const active = zoom.activeSpeaker === key;
+      setTile($('zTile-' + key), { name: panelName(key), active, micOn: active });
+    });
+    const me = selfName();
+    setTile(els.zTileSelf, { name: `${me} (${curLang() === 'en' ? 'You' : 'Anda'})`, active: holding, micOn: holding });
+    els.zSelfAvatar.textContent = me.split(/\s+/).slice(0, 2).map((w) => w[0] || '').join('').toUpperCase() || 'A';
+
+    // Toolbar
+    els.zMicBtn.disabled = els.micBtn.disabled;
+    els.zMicBtn.classList.toggle('zbtn-live', holding);
+    els.zMicIcon.innerHTML = holding ? icon('mic', 'w-6 h-6 text-emerald-400') : icon('micOff', 'w-6 h-6 text-red-500');
+    const narrow = window.matchMedia('(max-width: 639px)').matches;
+    els.zMicLabel.textContent = micLabel(holding, narrow);
+    els.zCamIcon.innerHTML = zoom.camStream ? icon('cam', 'w-6 h-6') : icon('camOff', 'w-6 h-6 text-red-500');
+    els.zCamLabel.textContent = narrow ? 'Video' : (zoom.camStream ? 'Matikan Video' : 'Mulai Video');
+    els.zCamBtn.disabled = zoom.camPending;
+    els.zStartBtn.disabled = els.startBtn.disabled;
+    els.zStartLabel.textContent = state.phase === 'idle' ? 'Mulai' : (narrow ? 'Ulang' : 'Mulai Ulang');
+    els.zEndBtn.disabled = els.endBtn.disabled;
+    const rec = state.phase === 'active';
+    els.zRec.classList.toggle('hidden', !rec);
+    els.zRec.classList.toggle('flex', rec);
+
+    // Live captions
+    let html = '';
+    if (holding) {
+      const t = (state.finalText + ' ' + state.interimText).trim();
+      const clock = answerClock();
+      const tone = clock.tone === 'red' ? 'text-red-400' : clock.tone === 'amber' ? 'text-amber-400' : 'text-slate-400';
+      html = `<span class="tabular-nums ${tone} mr-1">⏱ ${clock.label}</span><span class="font-semibold text-sky-300">${escapeHtml(me)}:</span> ` +
+        (t ? escapeHtml(t) : '<span class="italic text-slate-400">(mendengarkan…)</span>');
+    } else if (zoom.caption) {
+      html = `<span class="font-semibold text-emerald-300">${escapeHtml(zoom.caption.who)}:</span> ${escapeHtml(zoom.caption.text)}`;
+    } else if (state.busy) {
+      html = state.busyNote
+        ? `<span class="text-amber-300">${escapeHtml(state.busyNote)}</span>`
+        : '<span class="italic text-slate-300">Panel sedang berdiskusi <span class="dot-typing"><span></span><span></span><span></span></span></span>';
+    } else if (state.phase === 'idle') {
+      html = '<span class="text-slate-300">Klik <b>Mulai</b> untuk bergabung ke ruang wawancara.</span>';
+    } else if (state.phase === 'ended') {
+      html = '<span class="text-slate-300">Wawancara selesai. Buka <b>Chat</b> untuk melihat evaluasi.</span>';
+    } else if (!state.speaking) {
+      html = isToggleMic()
+        ? '<span class="text-slate-400">Klik tombol mic atau tekan <b>Spasi</b> untuk mulai menjawab.</span>'
+        : '<span class="text-slate-400">Tahan <b>Spasi</b> atau tombol mic untuk menjawab.</span>';
+    }
+    els.zCaption.innerHTML = html;
+    els.zCaption.classList.toggle('hidden', !html);
+  }
+
+  async function startCamera() {
+    if (zoom.camStream || zoom.camPending) return;
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      toast('Kamera tidak tersedia di sini (butuh http://localhost atau https).', 5000);
+      return;
+    }
+    zoom.camPending = true;
+    updateZoomUI();
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' }, audio: false
+      });
+      if (!zoom.on) { stream.getTracks().forEach((t) => t.stop()); return; } // left the view meanwhile
+      zoom.camStream = stream;
+      els.zSelfVideo.srcObject = stream;
+      els.zSelfVideo.classList.remove('hidden');
+      els.zSelfAvatar.classList.add('hidden');
+      try { await els.zSelfVideo.play(); } catch { /* autoplay muted usually fine */ }
+    } catch (e) {
+      toast(e && e.name === 'NotAllowedError'
+        ? 'Izin kamera ditolak. Anda tetap bisa wawancara dengan kamera mati.'
+        : 'Kamera tidak dapat diakses: ' + ((e && (e.message || e.name)) || 'unknown'), 5000);
+    } finally {
+      zoom.camPending = false;
+      updateZoomUI();
+    }
+  }
+
+  function stopCamera() {
+    if (zoom.camStream) zoom.camStream.getTracks().forEach((t) => t.stop());
+    zoom.camStream = null;
+    els.zSelfVideo.srcObject = null;
+    els.zSelfVideo.classList.add('hidden');
+    els.zSelfAvatar.classList.remove('hidden');
+    updateZoomUI();
+  }
+
+  function enterZoom() {
+    if (zoom.on) return;
+    zoom.on = true;
+    // Reuse the same chat log + text form inside the meeting's chat panel
+    els.chatLog.after(chatMarker);
+    els.textForm.after(formMarker);
+    els.zFormSlot.before(els.chatLog);
+    els.zFormSlot.appendChild(els.textForm);
+    zoom.unread = 0;
+    setChatOpen(false);
+    els.zoomView.classList.remove('hidden');
+    document.body.classList.add('overflow-hidden');
+    updateZoomUI();
+    startCamera();
+  }
+
+  function exitZoom() {
+    if (!zoom.on) return;
+    stopCamera();
+    zoom.on = false;
+    chatMarker.replaceWith(els.chatLog);
+    formMarker.replaceWith(els.textForm);
+    els.zoomView.classList.add('hidden');
+    document.body.classList.remove('overflow-hidden');
+    scrollToBottom();
+  }
+
+  // ===================== SPEECH-TO-TEXT =====================
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let recognition = null;
+
+  function initRecognition() {
+    if (!SR) return null;
+    const r = new SR();
+    r.continuous = true;
+    r.interimResults = true;
+    r.maxAlternatives = 1;
+    r.lang = LANG[curLang()].stt;
+
+    r.onresult = (e) => {
+      let interim = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const res = e.results[i];
+        if (res.isFinal) state.finalText += res[0].transcript + ' ';
+        else interim += res[0].transcript;
+      }
+      state.interimText = interim;
+      updateLiveBubble();
+    };
+
+    r.onerror = (e) => {
+      if (e.error === 'no-speech' || e.error === 'aborted') return;
+      state.holding = false;      // prevent auto-restart loop on hard errors
+      state.discardSpeech = true; // don't override this error with "no speech" toast
+      stopListenTimer();
+      setMicUI(false);
+      const map = {
+        'not-allowed': 'Akses mikrofon ditolak. Izinkan mikrofon di pengaturan browser (ikon gembok di address bar).',
+        'service-not-allowed': 'Layanan speech recognition tidak diizinkan. Gunakan Google Chrome / Edge melalui http://localhost atau https.',
+        'audio-capture': 'Mikrofon tidak terdeteksi. Periksa perangkat mikrofon Anda.',
+        'network': 'Speech recognition membutuhkan koneksi internet. Periksa koneksi Anda.',
+        'language-not-supported': 'Bahasa tidak didukung oleh speech recognition browser ini.'
+      };
+      toast(map[e.error] || ('Speech recognition error: ' + e.error), 6000);
+    };
+
+    r.onend = () => {
+      state.recognizing = false;
+      // Browser may stop on its own (silence/timeout) while user still holds: restart
+      if (state.holding) {
+        try { r.start(); state.recognizing = true; return; } catch { state.holding = false; setMicUI(false); }
+      }
+      finalizeSpeech();
+    };
+    return r;
+  }
+
+  const isToggleMic = () => els.micMode.value === 'toggle';
+  function micLabel(on, short) {
+    if (isToggleMic()) return on ? (short ? 'Kirim' : 'Klik untuk Kirim') : (short ? 'Bicara' : 'Klik untuk Bicara');
+    return on ? (short ? 'Lepas' : 'Lepas untuk Kirim') : (short ? 'Tahan' : 'Tahan untuk Bicara');
+  }
+
+  function setMicUI(on) {
+    els.micBtn.classList.toggle('mic-active', on);
+    els.micBtn.classList.toggle('bg-red-700', on);
+    els.micLabel.textContent = micLabel(on, false);
+    refreshStatus();
+  }
+
+  let listenTimer = null;
+  function stopListenTimer() { if (listenTimer) { clearInterval(listenTimer); listenTimer = null; } }
+  function startListenTimer() {
+    stopListenTimer();
+    state.listenStart = Date.now();
+    listenTimer = setInterval(() => {
+      if (!state.holding) { stopListenTimer(); return; }
+      if (answerClock().sec >= MAX_ANSWER_SEC) {
+        toast('Batas 3 menit tercapai, jawaban dikirim. Latih jawaban yang lebih ringkas (30-90 detik).', 5000);
+        stopListening();
+        return;
+      }
+      updateLiveBubble();
+    }, 1000);
+  }
+
+  function toggleListening() {
+    if (state.holding) stopListening();
+    else startListening();
+  }
+
+  function startListening() {
+    if (!recognition) { toast('Browser ini tidak mendukung speech recognition. Gunakan Google Chrome atau Microsoft Edge.'); return; }
+    if (state.phase !== 'active' || state.busy || state.holding) return;
+    if (state.recognizing) { toast('Tunggu sebentar, memproses rekaman sebelumnya…', 2000); return; }
+    stopSpeaking(); // barge-in: silence the panel when candidate speaks
+    state.holding = true;
+    state.discardSpeech = false;
+    state.finalText = '';
+    state.interimText = '';
+    recognition.lang = LANG[curLang()].stt;
+    try {
+      recognition.start();
+      state.recognizing = true;
+    } catch (e) {
+      state.holding = false;
+      toast('Gagal memulai mikrofon: ' + e.message);
+      return;
+    }
+    showLiveBubble();
+    startListenTimer();
+    setMicUI(true);
+  }
+
+  function stopListening() {
+    if (!state.holding) return;
+    state.holding = false;
+    stopListenTimer();
+    setMicUI(false);
+    try { recognition.stop(); } catch { /* already stopped */ }
+  }
+
+  function cancelListening() {
+    state.discardSpeech = true;
+    state.holding = false;
+    stopListenTimer();
+    setMicUI(false);
+    if (recognition && state.recognizing) { try { recognition.abort(); } catch { /* ignore */ } }
+    removeLiveBubble();
+    state.finalText = '';
+    state.interimText = '';
+  }
+
+  function finalizeSpeech() {
+    const text = (state.finalText + ' ' + state.interimText).replace(/\s+/g, ' ').trim();
+    state.finalText = '';
+    state.interimText = '';
+    removeLiveBubble();
+    if (state.discardSpeech) { state.discardSpeech = false; return; }
+    if (!text) { toast('Tidak ada suara yang terdeteksi. Bicara lebih dekat ke mikrofon, lalu coba lagi.', 3000); refreshStatus(); return; }
+    sendTurn(text);
+  }
+
+  // ===================== INTERVIEW FLOW =====================
+  function focusChatOnSmallScreens() {
+    if (!zoom.on && window.matchMedia('(max-width: 1023px)').matches) {
+      document.getElementById('chatSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
+  function startInterview() {
+    if (!els.apiKey.value.trim()) { toast('Masukkan Gemini API Key terlebih dahulu.'); els.apiKey.focus(); return; }
+    if (!modelName()) { toast('Ketik nama model Gemini terlebih dahulu.'); els.customModel.focus(); return; }
+    if (state.phase === 'active' && state.history.length > 1 &&
+        !confirm('Wawancara sedang berlangsung. Mulai ulang dan hapus percakapan saat ini?')) return;
+    if (!kb.knowledge && !kb.protocol &&
+        !confirm('Knowledge base dari folder raw/ belum dimuat, jadi panel tidak mengenal profil dan berkas Anda. Lanjutkan tanpa knowledge base?')) return;
+
+    saveSettings();
+    cancelListening();
+    stopSpeaking();
+    // Prime speech synthesis within a user gesture (autoplay policies)
+    if (synth) { try { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; synth.speak(u); } catch { /* ignore */ } }
+
+    state.sessionId++;
+    clearSavedSession();
+    state.history = [];
+    state.busy = false;
+    state.questionCount = 0;
+    els.qCount.textContent = '0';
+    clearChat();
+    state.phase = 'active';
+    startTimer();
+    const mode = sessionMode();
+    const kbLabel = kb.knowledge || kb.protocol ? 'dengan knowledge base' : 'tanpa knowledge base';
+    addMessage('system', `Wawancara dimulai · ${mode.label} · ${kbLabel} · ${els.lang.value.toUpperCase()} · ${modelName()}`);
+    focusChatOnSmallScreens();
+    sendTurn(LANG[curLang()].startMsg(mode.label), { display: false });
+  }
+
+  function endInterview() {
+    if (state.phase !== 'active' || state.busy) return;
+    cancelListening();
+    const L = LANG[curLang()];
+    sendTurn(L.evalMsg, { displayText: L.evalDisplay, isEval: true });
+  }
+
+  function downloadTranscript() {
+    if (!state.transcript.length) return;
+    const header = `LPDP AI Mock Interview — MSc Artificial Intelligence, University of Edinburgh\nTanggal: ${new Date().toLocaleString()}\nModel: ${modelName()} · Bahasa: ${els.lang.value.toUpperCase()} · Mode: ${sessionMode().label}\n${'='.repeat(60)}\n\n`;
+    const body = state.transcript.map((t) => `[${t.time}] ${t.who}:\n${t.text}\n`).join('\n');
+    const blob = new Blob([header + body], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `lpdp-mock-interview-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  // ===================== EVENT BINDINGS =====================
+  function bindEvents() {
+    els.toggleKey.addEventListener('click', () => {
+      els.apiKey.type = els.apiKey.type === 'password' ? 'text' : 'password';
+    });
+    els.apiKey.addEventListener('change', saveSettings);
+    els.rememberKey.addEventListener('change', saveSettings);
+    els.model.addEventListener('change', () => {
+      syncCustomModel();
+      if (els.model.value === '__custom') els.customModel.focus();
+      saveSettings();
+    });
+    els.customModel.addEventListener('change', saveSettings);
+    els.ttsToggle.addEventListener('change', () => { if (!els.ttsToggle.checked) stopSpeaking(); saveSettings(); });
+    els.voice.addEventListener('change', () => { savedVoice = els.voice.value; saveSettings(); });
+    els.rate.addEventListener('input', () => { els.rateVal.textContent = parseFloat(els.rate.value).toFixed(1) + 'x'; });
+    els.rate.addEventListener('change', saveSettings);
+    els.lang.addEventListener('change', () => {
+      if (recognition && !state.recognizing) recognition.lang = LANG[curLang()].stt;
+      savedVoice = '';
+      els.voice.value = '';
+      populateVoices();
+      saveSettings();
+      updateZoomUI();
+      if (state.phase === 'active') addMessage('system', `Bahasa diubah ke ${els.lang.value.toUpperCase()} — berlaku mulai giliran berikutnya.`);
+    });
+
+    els.sessionMode.addEventListener('change', () => { syncModeUI(); renderKbStatus(); saveSettings(); });
+    els.focusCat.addEventListener('change', () => {
+      syncModeUI();
+      // Kategori N adalah modul bahasa Inggris: samakan bahasa STT/TTS
+      if (els.focusCat.value === 'N' && els.lang.value !== 'en') {
+        els.lang.value = 'en';
+        els.lang.dispatchEvent(new Event('change'));
+        toast('Kategori N memakai bahasa Inggris: bahasa diubah ke EN.');
+      }
+      renderKbStatus();
+      saveSettings();
+    });
+    els.kbReload.addEventListener('click', () => loadKbFromFolder(false));
+    els.kbFile.addEventListener('change', async () => {
+      await loadKbFromFiles(els.kbFile.files);
+      els.kbFile.value = ''; // allow re-selecting the same files
+    });
+    els.kbClear.addEventListener('click', () => {
+      if (confirm('Hapus knowledge base dari aplikasi dan penyimpanan browser ini?')) clearKb();
+    });
+
+    els.startBtn.addEventListener('click', startInterview);
+    els.endBtn.addEventListener('click', endInterview);
+    els.stopTtsBtn.addEventListener('click', stopSpeaking);
+    els.downloadBtn.addEventListener('click', downloadTranscript);
+
+    els.textForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const t = els.textInput.value.trim();
+      if (!t || state.busy || state.phase !== 'active') return;
+      els.textInput.value = '';
+      sendTurn(t);
+    });
+
+    // Push-to-talk (mouse + touch via Pointer Events), for the main and the Zoom-view mic
+    const bindHoldToTalk = (btn) => {
+      btn.addEventListener('pointerdown', (e) => {
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
+        e.preventDefault();
+        if (isToggleMic()) { toggleListening(); return; }
+        try { btn.setPointerCapture(e.pointerId); } catch { /* ignore */ }
+        startListening();
+      });
+      const release = () => { if (!isToggleMic()) stopListening(); };
+      btn.addEventListener('pointerup', release);
+      btn.addEventListener('pointercancel', release);
+      btn.addEventListener('lostpointercapture', release);
+      btn.addEventListener('contextmenu', (e) => e.preventDefault());
+      // Keyboard on focused mic button (Enter) — same behaviour as the pointer
+      btn.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' || e.repeat) return;
+        e.preventDefault();
+        if (isToggleMic()) toggleListening(); else startListening();
+      });
+      btn.addEventListener('keyup', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); release(); }
+      });
+    };
+    bindHoldToTalk(els.micBtn);
+    bindHoldToTalk(els.zMicBtn);
+
+    // Zoom-like view
+    els.zoomBtn.addEventListener('click', enterZoom);
+    window.addEventListener('resize', updateZoomUI);
+    els.zExitBtn.addEventListener('click', exitZoom);
+    els.zCamBtn.addEventListener('click', () => (zoom.camStream ? stopCamera() : startCamera()));
+    els.zChatBtn.addEventListener('click', () => setChatOpen(!zoom.chatOpen));
+    els.zChatClose.addEventListener('click', () => setChatOpen(false));
+    els.zStartBtn.addEventListener('click', startInterview);
+    els.zEndBtn.addEventListener('click', endInterview);
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && zoom.on && zoom.chatOpen) setChatOpen(false);
+    });
+
+    // Hold Space anywhere (except in form fields) to talk
+    const isTypingTarget = (t) => t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable);
+    document.addEventListener('keydown', (e) => {
+      if (e.code !== 'Space' || isTypingTarget(e.target)) return;
+      e.preventDefault();
+      if (e.repeat) return;
+      if (isToggleMic()) toggleListening(); else startListening();
+    });
+    document.addEventListener('keyup', (e) => {
+      if (e.code !== 'Space' || isTypingTarget(e.target)) return;
+      e.preventDefault();
+      if (!isToggleMic()) stopListening();
+    });
+    window.addEventListener('blur', () => { if (!isToggleMic()) stopListening(); });
+    els.micMode.addEventListener('change', () => { setMicUI(state.holding); saveSettings(); });
+    window.addEventListener('beforeunload', () => { if (synth) synth.cancel(); stopCamera(); });
+  }
+
+  // ===================== INIT =====================
+  function init() {
+    const s = loadSettings();
+    savedVoice = s.voice || '';
+    els.rateVal.textContent = parseFloat(els.rate.value).toFixed(1) + 'x';
+
+    recognition = initRecognition();
+    if (!recognition) {
+      els.sttWarn.textContent = '⚠ Browser ini tidak mendukung Web Speech API (speech-to-text). Gunakan Google Chrome atau Microsoft Edge. Anda tetap bisa mengetik jawaban.';
+      els.sttWarn.classList.remove('hidden');
+    }
+    if (!synth) {
+      els.voiceWarn.textContent = 'Browser ini tidak mendukung text-to-speech.';
+      els.voiceWarn.classList.remove('hidden');
+      els.ttsToggle.checked = false;
+      els.ttsToggle.disabled = true;
+    } else {
+      populateVoices();
+      if (typeof synth.addEventListener === 'function') synth.addEventListener('voiceschanged', populateVoices);
+      else synth.onvoiceschanged = populateVoices;
+    }
+
+    syncModeUI();
+    bindEvents();
+    renderKbStatus();
+    setMicUI(false);
+    updateControls();
+    offerResume();
+    // Knowledge base: folder raw/ (via http) first, otherwise the copy saved in this browser
+    loadKbFromFolder(true).then((ok) => { if (!ok) loadKbFromCache(); });
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
