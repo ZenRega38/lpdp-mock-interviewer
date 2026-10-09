@@ -11,7 +11,7 @@ Semuanya berjalan **di browser**, dalam satu file `index.html`, tanpa backend.
 - **Voice-to-voice.** Jawab dengan suara (Web Speech API), dan panel menjawab dengan suara (Speech Synthesis). Transkrip tampil secara real-time.
 - **Mode mikrofon.** *Tahan untuk bicara* (tombol atau `Spasi`) atau *klik mulai, klik kirim* (lebih nyaman di HP).
 - **Penghitung waktu jawaban.** Berubah kuning setelah 90 detik dan merah setelah 120 detik, dengan batas otomatis 3 menit.
-- **Mode Zoom.** Tampilan ruang meeting: tiga panelis dengan kamera mati, kamera Anda menyala, penanda pembicara aktif, suara berbeda per panelis, *live caption*, dan panel chat.
+- **Ruang rapat.** Tampilan ala Zoom: tiga panelis dengan kamera mati, kamera Anda menyala, penanda pembicara aktif, suara berbeda per panelis, *live caption*, dan panel chat.
 - **Knowledge base pribadi.** Panel memakai profil, berkas, dan bank pertanyaan Anda (lihat [`raw/README.md`](raw/README.md)).
 - **Mode sesi.** Sesi penuh (±45 menit), fokus per kategori (A sampai N, S), audit berkas, dan sesi tekanan.
 - **Evaluasi akhir.** Skor per panelis (0–100), rubrik tujuh dimensi (1–5), ID pertanyaan, tanda merah, fakta yang perlu diverifikasi, dan rencana latihan 3 hari.
@@ -23,7 +23,7 @@ Semuanya berjalan **di browser**, dalam satu file `index.html`, tanpa backend.
 1. Buat **Gemini API key** gratis di [Google AI Studio](https://aistudio.google.com/apikey).
 2. Buka aplikasinya (link di atas, atau jalankan lokal).
 3. Tempel API key, pilih bahasa, lalu muat knowledge base (opsional tapi disarankan).
-4. Klik **Mulai Wawancara**, jawab pertanyaan panel, lalu klik **Akhiri & Evaluasi** untuk skor.
+4. Klik **Mulai sesi**, jawab pertanyaan panel, lalu klik **Akhiri & nilai** untuk laporan evaluasi.
 
 ### Menjalankan lokal
 
@@ -52,7 +52,7 @@ Gunakan `http://localhost`, bukan membuka file langsung (`file://`), agar izin m
 |---|---|---|---|
 | Speech-to-text | ✅ | ⚠️ terbatas | ❌ (pakai kolom ketik) |
 | Text-to-speech | ✅ | ✅ | ✅ |
-| Kamera (Mode Zoom) | ✅ | ✅ | ✅ |
+| Kamera (Ruang rapat) | ✅ | ✅ | ✅ |
 
 Speech-to-text di Chrome/Edge memakai layanan cloud browser, jadi butuh koneksi internet.
 

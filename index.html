@@ -3,26 +3,94 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Simulasi wawancara substansi LPDP berbasis suara (voice-to-voice) dengan Gemini, berjalan sepenuhnya di browser." />
-  <meta name="theme-color" content="#1e3a8a" />
+  <meta name="description" content="Latihan wawancara seleksi substansi LPDP dengan panel suara: psikolog, akademisi, dan perwakilan LPDP. Berjalan di browser, memakai kunci Gemini Anda sendiri." />
+  <meta name="theme-color" content="#f3efe7" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8E%93%3C/text%3E%3C/svg%3E" />
-  <title>LPDP AI Mock Interviewer</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%231e4d3b'/%3E%3Crect x='12' y='5' width='8' height='14' rx='4' fill='%23f3efe7'/%3E%3Cpath d='M8.5 14.5a7.5 7.5 0 0 0 15 0M16 22v5' stroke='%23f3efe7' stroke-width='2.2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E" />
+  <title>Ruang Wawancara · Latihan Seleksi Substansi LPDP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,500;0,7..72,600;1,7..72,400&display=swap" rel="stylesheet" />
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            paper: 'var(--paper)', sheet: 'var(--sheet)', line: 'var(--line)', line2: 'var(--line-2)',
+            ink: 'var(--ink)', ink2: 'var(--ink-2)', mute: 'var(--mute)',
+            accent: 'var(--accent)', rec: 'var(--rec)', warn: 'var(--warn)',
+            psy: 'var(--psy)', aca: 'var(--aca)', lpdp: 'var(--lpdp)'
+          },
+          fontFamily: {
+            sans: ['"IBM Plex Sans"', 'system-ui', 'sans-serif'],
+            serif: ['Literata', 'Georgia', 'serif'],
+            mono: ['"IBM Plex Mono"', 'ui-monospace', 'monospace']
+          }
+        }
+      }
+    };
+  </script>
   <style>
+    :root {
+      --paper: #f3efe7; --sheet: #fbf9f4; --line: #dcd4c4; --line-2: #ebe5d9;
+      --ink: #1f1d19; --ink-2: #47423a; --mute: #7a7364;
+      --accent: #1e4d3b; --accent-2: #163a2c; --rec: #b3261e; --warn: #94600a;
+      --psy: #8a4b2b; --aca: #2b5876; --lpdp: #1e4d3b;
+    }
     html, body { height: 100%; }
+    body { background: var(--paper); color: var(--ink); font-family: "IBM Plex Sans", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    ::selection { background: #d9e6dc; }
+
+    .label { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 11px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: var(--mute); }
+    .tone-psy { color: var(--psy) !important; } .tone-aca { color: var(--aca) !important; } .tone-lpdp { color: var(--lpdp) !important; }
+    .tone-ink { color: var(--ink) !important; } .tone-rec { color: var(--rec) !important; } .tone-warn { color: var(--warn) !important; }
+
+    .field { width: 100%; background: var(--sheet); border: 1px solid var(--line); border-radius: 4px; padding: .5rem .625rem; font-size: .875rem; color: var(--ink); }
+    .field:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+    .field:disabled { color: var(--mute); background: var(--paper); }
+    input[type="checkbox"], input[type="range"] { accent-color: var(--accent); }
+
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; height: 2.5rem; padding: 0 1rem; border-radius: 4px; font-size: .875rem; font-weight: 500; white-space: nowrap; transition: background-color .15s, border-color .15s, color .15s; }
+    .btn:disabled { opacity: .4; cursor: not-allowed; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: var(--accent-2); }
+    .btn-ghost { border: 1px solid var(--line); color: var(--ink); background: transparent; }
+    .btn-ghost:hover:not(:disabled) { border-color: var(--ink); }
+    .link { font-size: .8125rem; color: var(--ink-2); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--line); }
+    .link:hover:not(:disabled) { color: var(--ink); text-decoration-color: var(--ink); }
+    .link:disabled { opacity: .4; cursor: not-allowed; }
+
+    .mic-btn { display: inline-flex; align-items: center; justify-content: center; gap: .65rem; height: 3.25rem; padding: 0 1.5rem 0 1.25rem; border-radius: 999px; background: var(--ink); color: var(--paper); font-weight: 500; transition: background-color .15s; }
+    .mic-btn:hover:not(:disabled) { background: #000; }
+    .mic-btn:disabled { opacity: .3; cursor: not-allowed; }
+    .mic-btn .rec-dot { display: none; width: .55rem; height: .55rem; border-radius: 50%; background: currentColor; animation: blink 1s infinite; }
+    .mic-btn.is-rec { background: var(--rec); }
+    .mic-btn.is-rec .rec-dot { display: inline-block; }
+    .mic-btn.is-rec .mic-ico { display: none; }
+    kbd { font-family: "IBM Plex Mono", monospace; font-size: .75em; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 3px; padding: 0 .3em; background: var(--sheet); }
+
+    .kb-ok { border-color: var(--accent); } .kb-missing { border-color: var(--warn); }
+    .err-box { border-left: 2px solid var(--rec); padding-left: 1rem; }
+
     #chatLog { scroll-behavior: smooth; }
-    .dot-typing span { display: inline-block; width: 6px; height: 6px; margin: 0 2px; border-radius: 9999px; background: currentColor; animation: blink 1.2s infinite both; }
+    .msg-body p { margin: .4rem 0; } .msg-body > :first-child { margin-top: 0; } .msg-body > :last-child { margin-bottom: 0; }
+    .msg-body h4 { font-family: Literata, Georgia, serif; font-weight: 600; font-size: 1.05rem; margin: 1.1rem 0 .35rem; }
+    .msg-body ul { list-style: disc; padding-left: 1.25rem; margin: .35rem 0; }
+    .msg-body ol { list-style: decimal; padding-left: 1.25rem; margin: .35rem 0; }
+    .msg-body li { margin: .2rem 0; } .msg-body strong { font-weight: 600; }
+
+    .dot-typing span { display: inline-block; width: 4px; height: 4px; margin: 0 1.5px; border-radius: 9999px; background: currentColor; animation: blink 1.2s infinite both; vertical-align: middle; }
     .dot-typing span:nth-child(2) { animation-delay: .2s; }
     .dot-typing span:nth-child(3) { animation-delay: .4s; }
     @keyframes blink { 0%, 80%, 100% { opacity: .2; } 40% { opacity: 1; } }
-    .mic-active { box-shadow: 0 0 0 0 rgba(239, 68, 68, .6); animation: pulse-ring 1.3s infinite; }
-    @keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgba(239,68,68,.55); } 70% { box-shadow: 0 0 0 16px rgba(239,68,68,0); } 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); } }
-    .msg-body h4 { font-weight: 700; margin: .6rem 0 .25rem; }
-    .msg-body p { margin: .25rem 0; }
-    .msg-body ul { list-style: disc; padding-left: 1.25rem; margin: .25rem 0; }
-    .msg-body ol { list-style: decimal; padding-left: 1.25rem; margin: .25rem 0; }
+
+    details > summary { list-style: none; cursor: pointer; }
+    details > summary::-webkit-details-marker { display: none; }
+    details[open] .chev { transform: rotate(90deg); }
+    .chev { transition: transform .15s; }
+
     #micBtn, #zMicBtn { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
     /* Zoom-like view */
     .ztile::after { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; box-shadow: inset 0 0 0 3px transparent; transition: box-shadow .15s; }
@@ -41,200 +109,178 @@
     @media (max-width: 639px) { .zbtn { min-width: 3rem; padding: .375rem .25rem; font-size: 10px; } }
   </style>
 </head>
-<body class="bg-slate-100 text-slate-800">
+<body>
   <div class="min-h-full flex flex-col">
-    <!-- Header -->
-    <header class="bg-gradient-to-r from-blue-900 to-indigo-800 text-white shadow">
-      <div class="max-w-7xl mx-auto px-4 py-4 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 class="text-xl md:text-2xl font-bold tracking-tight">🎓 LPDP AI Mock Interviewer</h1>
-          <p class="text-blue-200 text-sm">Voice-to-Voice · MSc Artificial Intelligence · University of Edinburgh</p>
+    <header class="border-b border-line">
+      <div class="max-w-[1200px] mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+        <div class="flex items-baseline gap-4 min-w-0">
+          <h1 class="font-serif text-[1.35rem] leading-none tracking-tight text-ink whitespace-nowrap">Ruang Wawancara</h1>
+          <p class="hidden md:block text-sm text-mute truncate">Latihan seleksi substansi LPDP · MSc Artificial Intelligence, Edinburgh</p>
         </div>
-        <div class="flex items-center gap-4 text-sm">
-          <div class="flex items-center gap-2 bg-white/10 rounded-full px-3 py-1.5">
-            <span id="statusDot" class="w-2.5 h-2.5 rounded-full bg-slate-300"></span>
-            <span id="statusText">Belum dimulai</span>
-          </div>
-          <div class="hidden sm:flex items-center gap-3 text-blue-100">
-            <span title="Durasi">⏱ <span id="timer">00:00</span></span>
-            <span title="Jumlah pertanyaan panel">❓ <span id="qCount">0</span></span>
-          </div>
+        <div class="flex items-center gap-5 label !text-ink2">
+          <span class="flex items-center gap-2"><span id="statusDot" class="w-2 h-2 rounded-full bg-mute"></span><span id="statusText">Siap</span></span>
+          <span class="hidden sm:inline" title="Durasi sesi"><span id="timer" class="text-ink">00:00</span></span>
+          <span class="hidden sm:inline" title="Jumlah pertanyaan panel">Tanya <span id="qCount" class="text-ink">0</span></span>
         </div>
       </div>
     </header>
 
-    <main class="flex-1 max-w-7xl w-full mx-auto px-4 py-5 grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-5">
-      <!-- Settings panel -->
-      <aside class="space-y-4">
-        <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 space-y-4">
-          <h2 class="font-semibold text-slate-700">⚙️ Pengaturan</h2>
-
-          <div>
-            <label for="apiKey" class="block text-sm font-medium text-slate-600 mb-1">Gemini API Key</label>
-            <div class="flex gap-2">
-              <input id="apiKey" type="password" autocomplete="off" spellcheck="false" placeholder="AIza..."
-                class="flex-1 min-w-0 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-              <button id="toggleKey" type="button" class="px-3 rounded-lg border border-slate-300 text-sm hover:bg-slate-50" title="Tampilkan/sembunyikan">👁</button>
-            </div>
-            <label class="mt-2 flex items-center gap-2 text-xs text-slate-500">
-              <input id="rememberKey" type="checkbox" class="rounded" /> Ingat API key di browser ini
-            </label>
-            <p class="mt-1 text-xs text-slate-400">Dapatkan gratis di <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" class="text-indigo-600 underline">Google AI Studio</a>. Key hanya dikirim langsung ke Google dan tidak pernah disimpan di server mana pun. Untuk versi online, batasi key ke domain Anda di Google Cloud Console.</p>
+    <main class="flex-1 max-w-[1200px] w-full mx-auto px-4 sm:px-6 py-6 grid grid-cols-1 lg:grid-cols-[272px_1fr] gap-8">
+      <!-- Setup column -->
+      <aside class="text-sm">
+        <section class="pb-5 border-b border-line">
+          <h2 class="label mb-3"><label for="apiKey">Kunci API Gemini</label></h2>
+          <div class="flex gap-2">
+            <input id="apiKey" type="password" autocomplete="off" spellcheck="false" placeholder="Tempel kunci di sini" class="field font-mono text-[13px]" />
+            <button id="toggleKey" type="button" class="btn btn-ghost h-[2.375rem] px-3 text-xs" title="Tampilkan atau sembunyikan kunci">Lihat</button>
           </div>
-
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label for="lang" class="block text-sm font-medium text-slate-600 mb-1">Bahasa</label>
-              <select id="lang" class="w-full rounded-lg border border-slate-300 px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                <option value="id">🇮🇩 Indonesia (ID)</option>
-                <option value="en">🇬🇧 English (EN)</option>
-              </select>
-            </div>
-            <div>
-              <label for="model" class="block text-sm font-medium text-slate-600 mb-1">Model</label>
-              <select id="model" class="w-full rounded-lg border border-slate-300 px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                <option value="gemini-flash-latest">gemini-flash-latest (Flash terbaru)</option>
-                <option value="gemini-flash-lite-latest">gemini-flash-lite-latest</option>
-                <option value="gemini-2.5-flash">gemini-2.5-flash</option>
-                <option value="gemini-2.5-flash-lite">gemini-2.5-flash-lite</option>
-                <option value="__custom">Lainnya (ketik manual)…</option>
-              </select>
-            </div>
-          </div>
-          <input id="customModel" type="text" autocomplete="off" spellcheck="false" placeholder="mis. gemini-3.5-flash"
-            class="hidden w-full -mt-2 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-
-          <div>
-            <label for="voice" class="block text-sm font-medium text-slate-600 mb-1">Suara Panelis (TTS)</label>
-            <select id="voice" class="w-full rounded-lg border border-slate-300 px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-              <option value="">Otomatis</option>
-            </select>
-            <p id="voiceWarn" class="hidden mt-1 text-xs text-amber-600"></p>
-          </div>
-
-          <div>
-            <label for="rate" class="flex justify-between text-sm font-medium text-slate-600 mb-1">
-              <span>Kecepatan bicara</span><span id="rateVal" class="text-slate-400">1.0x</span>
-            </label>
-            <input id="rate" type="range" min="0.7" max="1.5" step="0.1" value="1" class="w-full accent-indigo-600" />
-          </div>
-
-          <div>
-            <label for="micMode" class="block text-sm font-medium text-slate-600 mb-1">Mode Mikrofon</label>
-            <select id="micMode" class="w-full rounded-lg border border-slate-300 px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-              <option value="hold">Tahan untuk bicara (push-to-talk)</option>
-              <option value="toggle">Klik mulai, klik lagi untuk kirim</option>
-            </select>
-          </div>
-
-          <label class="flex items-center gap-2 text-sm text-slate-600">
-            <input id="ttsToggle" type="checkbox" class="rounded" checked /> Bacakan respons panel otomatis
+          <label class="mt-3 flex items-center gap-2 text-ink2">
+            <input id="rememberKey" type="checkbox" /> Ingat di perangkat ini
           </label>
+          <p class="mt-2 text-xs text-mute leading-relaxed">Kunci hanya dikirim ke Google. Belum punya? <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" class="link text-xs">Buat gratis di AI Studio</a>.</p>
         </section>
 
-        <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 space-y-3">
-          <h2 class="font-semibold text-slate-700">📚 Knowledge Base &amp; Mode Sesi</h2>
-          <div id="kbStatus" class="text-xs rounded-lg px-3 py-2 bg-amber-50 text-amber-800 border border-amber-200">Belum dimuat.</div>
-          <div class="flex flex-wrap gap-2">
-            <button id="kbReload" type="button" class="text-xs px-3 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">↻ Muat dari folder raw/</button>
-            <label id="kbPickLabel" class="text-xs px-3 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-50 cursor-pointer">
-              📂 Pilih file .md…
+        <section class="py-5 border-b border-line">
+          <h2 class="label mb-3">Berkas kandidat</h2>
+          <div id="kbStatus" class="border-l-2 pl-3 kb-missing">Belum ada berkas.</div>
+          <div class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
+            <button id="kbReload" type="button" class="link">Muat dari raw/</button>
+            <label id="kbPickLabel" class="link cursor-pointer">
+              Pilih file…
               <input id="kbFile" type="file" accept=".md,.markdown,.txt,text/markdown,text/plain" multiple class="hidden" />
             </label>
-            <button id="kbClear" type="button" class="text-xs px-3 py-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed">Hapus</button>
+            <button id="kbClear" type="button" class="link">Hapus</button>
           </div>
-          <p class="text-xs text-slate-400">Dijalankan lewat <code>http://localhost</code> dengan folder <code>raw/</code> terisi: dimuat otomatis. Versi online (GitHub Pages) atau file://: pilih file .md Anda; isinya disimpan hanya di browser ini, tidak pernah diunggah ke server mana pun selain Gemini.</p>
+        </section>
 
+        <section class="py-5 border-b border-line space-y-3">
+          <h2 class="label">Sesi</h2>
           <div>
-            <label for="sessionMode" class="block text-sm font-medium text-slate-600 mb-1">Mode Sesi</label>
-            <select id="sessionMode" class="w-full rounded-lg border border-slate-300 px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-100">
-              <option value="full">Sesi penuh (±45 menit)</option>
-              <option value="focus">Sesi fokus (1 kategori)</option>
-              <option value="audit">Sesi audit berkas (Kategori J)</option>
-              <option value="pressure">Sesi tekanan (G13 + EXTRA)</option>
+            <label for="sessionMode" class="block text-ink2 mb-1">Format</label>
+            <select id="sessionMode" class="field">
+              <option value="full">Sesi penuh, sekitar 45 menit</option>
+              <option value="focus">Fokus satu kategori</option>
+              <option value="audit">Audit berkas (kategori J)</option>
+              <option value="pressure">Sesi tekanan</option>
             </select>
           </div>
           <div id="focusWrap" class="hidden">
-            <label for="focusCat" class="block text-sm font-medium text-slate-600 mb-1">Kategori Fokus</label>
-            <select id="focusCat" class="w-full rounded-lg border border-slate-300 px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-100">
-              <option value="A">A · Pembuka dan Profil Diri</option>
-              <option value="B">B · Motivasi, Kampus dan Program Studi</option>
-              <option value="C">C · Kelayakan Akademik dan Riset (ALFANDA)</option>
-              <option value="D">D · Skema STEM Industri Strategis dan Isu Nasional</option>
-              <option value="E">E · Rencana Kontribusi dan Pengabdian</option>
-              <option value="F">F · Nilai LPDP, Dana Negara dan Integritas</option>
-              <option value="G">G · Psikologi, Ketahanan dan Karakter</option>
-              <option value="H">H · Kepemimpinan dan Organisasi</option>
-              <option value="I">I · Pengalaman Kerja dan Fokus</option>
-              <option value="J">J · Serangan pada Berkas (Konsistensi)</option>
-              <option value="K">K · Isu Terkini dan Wawasan</option>
-              <option value="L">L · Rencana Cadangan, Finansial dan Logistik</option>
+            <label for="focusCat" class="block text-ink2 mb-1">Kategori</label>
+            <select id="focusCat" class="field">
+              <option value="A">A · Pembuka dan profil diri</option>
+              <option value="B">B · Motivasi, kampus, program studi</option>
+              <option value="C">C · Akademik dan riset (ALFANDA)</option>
+              <option value="D">D · Skema STEM dan isu nasional</option>
+              <option value="E">E · Rencana kontribusi</option>
+              <option value="F">F · Nilai LPDP dan integritas</option>
+              <option value="G">G · Psikologi dan ketahanan</option>
+              <option value="H">H · Kepemimpinan dan organisasi</option>
+              <option value="I">I · Pengalaman kerja</option>
+              <option value="J">J · Konsistensi berkas</option>
+              <option value="K">K · Isu terkini</option>
+              <option value="L">L · Rencana cadangan dan logistik</option>
               <option value="M">M · Penutup</option>
-              <option value="N">N · Mini-Set Bahasa Inggris</option>
-              <option value="S">S · Sensitif (agama, keluarga, domisili) ⚠</option>
+              <option value="N">N · Bahasa Inggris</option>
+              <option value="S">S · Sensitif: agama, keluarga, domisili</option>
             </select>
-            <p id="sensitiveNote" class="hidden mt-1 text-xs text-red-600">Mode Sensitif aktif: data pribadi sensitif (Bagian 2.10 &amp; Kategori S) akan dikirim ke Gemini. Ucapkan "berhenti" kapan saja.</p>
+            <p id="sensitiveNote" class="hidden mt-2 text-xs tone-rec leading-relaxed">Data pribadi sensitif dari berkas Anda ikut dikirim ke Gemini. Katakan "berhenti" kapan saja.</p>
           </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label for="lang" class="block text-ink2 mb-1">Bahasa</label>
+              <select id="lang" class="field">
+                <option value="id">Indonesia</option>
+                <option value="en">English</option>
+              </select>
+            </div>
+            <div>
+              <label for="model" class="block text-ink2 mb-1">Model</label>
+              <select id="model" class="field">
+                <option value="gemini-flash-latest">Flash terbaru</option>
+                <option value="gemini-flash-lite-latest">Flash-Lite terbaru</option>
+                <option value="gemini-2.5-flash">2.5 Flash</option>
+                <option value="gemini-2.5-flash-lite">2.5 Flash-Lite</option>
+                <option value="__custom">Lainnya…</option>
+              </select>
+            </div>
+          </div>
+          <input id="customModel" type="text" autocomplete="off" spellcheck="false" placeholder="nama model, mis. gemini-3.5-flash" class="hidden field font-mono text-[13px]" />
         </section>
 
-        <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 text-sm text-slate-600 space-y-2">
-          <h2 class="font-semibold text-slate-700">📋 Cara Pakai</h2>
-          <ol class="list-decimal pl-5 space-y-1">
-            <li>Masukkan Gemini API Key, pilih bahasa, pastikan Knowledge Base dimuat, lalu pilih mode sesi.</li>
-            <li>Klik <b>Mulai Wawancara</b>. Panel akan bertanya.</li>
-            <li><b>Tahan</b> tombol mic (atau <kbd class="px-1 border rounded bg-slate-50">Spasi</kbd>) saat menjawab, lepas untuk mengirim. Di HP, ubah <b>Mode Mikrofon</b> ke "Klik" agar tidak perlu menahan.</li>
-            <li>Idealnya tiap jawaban 30 sampai 90 detik; penghitung waktu berubah kuning/merah bila terlalu panjang.</li>
-            <li>Klik <b>Akhiri &amp; Evaluasi</b> untuk skor akhir.</li>
-          </ol>
-          <p id="sttWarn" class="hidden text-xs text-red-600 font-medium"></p>
-        </section>
+        <details class="py-5 group">
+          <summary class="flex items-center justify-between">
+            <span class="label">Suara dan mikrofon</span>
+            <svg class="chev w-3.5 h-3.5 text-mute" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>
+          </summary>
+          <div class="mt-3 space-y-3">
+            <div>
+              <label for="micMode" class="block text-ink2 mb-1">Cara merekam</label>
+              <select id="micMode" class="field">
+                <option value="hold">Tahan tombol selama bicara</option>
+                <option value="toggle">Klik mulai, klik lagi untuk kirim</option>
+              </select>
+            </div>
+            <div>
+              <label for="voice" class="block text-ink2 mb-1">Suara panel</label>
+              <select id="voice" class="field"><option value="">Otomatis</option></select>
+              <p id="voiceWarn" class="hidden mt-1 text-xs tone-warn"></p>
+            </div>
+            <div>
+              <label for="rate" class="flex justify-between text-ink2 mb-1"><span>Kecepatan bicara</span><span id="rateVal" class="font-mono text-xs text-mute">1.0x</span></label>
+              <input id="rate" type="range" min="0.7" max="1.5" step="0.1" value="1" class="w-full" />
+            </div>
+            <label class="flex items-center gap-2 text-ink2">
+              <input id="ttsToggle" type="checkbox" checked /> Bacakan pertanyaan panel
+            </label>
+          </div>
+        </details>
       </aside>
 
-      <!-- Chat area -->
-      <section id="chatSection" class="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col min-h-[70vh] lg:h-[calc(100vh-9rem)] scroll-mt-2">
-        <div class="flex items-center justify-between px-4 py-3 border-b border-slate-200">
-          <h2 class="font-semibold text-slate-700">💬 Chat Log <span class="font-normal text-slate-400 text-sm">(transkrip real-time)</span></h2>
-          <div class="flex gap-2">
-            <button id="stopTtsBtn" type="button" class="hidden text-xs px-3 py-1.5 rounded-lg bg-amber-100 text-amber-800 hover:bg-amber-200">🔇 Hentikan suara</button>
-            <button id="downloadBtn" type="button" class="text-xs px-3 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed" disabled>⬇ Unduh Transkrip</button>
+      <!-- Transcript -->
+      <section id="chatSection" class="bg-sheet border border-line rounded-[6px] flex flex-col min-h-[70vh] lg:h-[calc(100vh-7rem)] scroll-mt-2">
+        <div class="flex items-center justify-between gap-4 px-5 sm:px-8 h-12 border-b border-line">
+          <h2 class="label">Transkrip</h2>
+          <div class="flex items-center gap-4">
+            <button id="stopTtsBtn" type="button" class="hidden link">Hentikan suara</button>
+            <button id="downloadBtn" type="button" class="link" disabled>Unduh .txt</button>
           </div>
         </div>
 
-        <div id="chatLog" class="flex-1 overflow-y-auto px-4 py-4 space-y-3 bg-slate-50">
-          <div id="emptyState" class="h-full flex flex-col items-center justify-center text-center text-slate-400 py-16">
-            <div class="text-5xl mb-3">🎙️</div>
-            <p class="font-medium">Belum ada percakapan.</p>
-            <p class="text-sm">Isi API key lalu klik <b>Mulai Wawancara</b>.</p>
+        <div id="chatLog" class="flex-1 overflow-y-auto px-5 sm:px-8 py-5">
+          <div id="emptyState" class="max-w-[38rem] py-4">
+            <p class="font-serif text-[1.6rem] leading-snug text-ink">Tiga orang akan menilai Anda hari ini.</p>
+            <p class="mt-3 text-ink2 leading-relaxed">Mereka bergantian bertanya, satu pertanyaan setiap giliran, dan akan menggali setiap jawaban yang belum disertai bukti. Tidak ada pujian basa-basi.</p>
+            <dl class="mt-6 border-y border-line divide-y divide-line text-[0.95rem]">
+              <div class="py-3 grid sm:grid-cols-[8.5rem_1fr] gap-x-6 gap-y-0.5"><dt class="label tone-psy pt-0.5">Psikolog</dt><dd class="text-ink2">Ketenangan, kejujuran, dan cara Anda menghadapi tekanan.</dd></div>
+              <div class="py-3 grid sm:grid-cols-[8.5rem_1fr] gap-x-6 gap-y-0.5"><dt class="label tone-aca pt-0.5">Akademisi</dt><dd class="text-ink2">Kesiapan riset, kedalaman teknis, dan alasan memilih Edinburgh.</dd></div>
+              <div class="py-3 grid sm:grid-cols-[8.5rem_1fr] gap-x-6 gap-y-0.5"><dt class="label tone-lpdp pt-0.5">Panelis LPDP</dt><dd class="text-ink2">Rencana kontribusi dan komitmen kembali ke Indonesia.</dd></div>
+            </dl>
+            <p class="mt-6 text-sm text-mute leading-relaxed">Isi kunci API, muat berkas kandidat, lalu tekan <span class="text-ink">Mulai sesi</span>. Saat menjawab, tahan tombol mikrofon atau <kbd>Spasi</kbd>. Usahakan setiap jawaban 30 sampai 90 detik.</p>
           </div>
         </div>
 
-        <!-- Controls -->
-        <div class="border-t border-slate-200 p-4 space-y-3">
-          <div class="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:justify-center sm:gap-3 text-sm sm:text-base">
-            <button id="startBtn" type="button"
-              class="px-4 sm:px-5 py-3 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition">
-              ▶ Mulai Wawancara
+        <div class="border-t border-line px-4 sm:px-8 py-4">
+          <div class="flex flex-wrap items-center gap-3">
+            <button id="micBtn" type="button" disabled class="mic-btn w-full sm:w-auto">
+              <svg class="mic-ico w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v1a7 7 0 0 0 14 0v-1"/><path d="M12 18v4"/></svg>
+              <span class="rec-dot"></span>
+              <span id="micLabel">Tahan untuk bicara</span>
             </button>
-            <button id="micBtn" type="button" disabled
-              class="col-span-2 order-first sm:order-none px-6 py-4 sm:py-3 rounded-xl bg-rose-600 text-white font-semibold hover:bg-rose-700 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center justify-center gap-2">
-              <span>🎤</span><span id="micLabel">Tahan untuk Bicara</span>
-            </button>
-            <button id="endBtn" type="button" disabled
-              class="px-4 sm:px-5 py-3 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition">
-              ⏹ Akhiri &amp; Evaluasi
-            </button>
-            <button id="zoomBtn" type="button"
-              class="col-span-2 px-4 sm:px-5 py-3 rounded-xl bg-sky-600 text-white font-semibold hover:bg-sky-700 transition">
-              🎥 Mode Zoom
-            </button>
+            <div class="grid grid-cols-3 gap-2 w-full sm:w-auto sm:flex sm:ml-auto">
+              <button id="startBtn" type="button" class="btn btn-primary">Mulai sesi</button>
+              <button id="endBtn" type="button" disabled class="btn btn-ghost">Akhiri &amp; nilai</button>
+              <button id="zoomBtn" type="button" class="btn btn-ghost" title="Tampilan seperti rapat video">
+                <svg class="w-4 h-4 hidden sm:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="14" height="12" rx="2"/><path d="M16 10l6-3v10l-6-3z"/></svg>
+                Ruang rapat
+              </button>
+            </div>
           </div>
-          <form id="textForm" class="flex gap-2">
-            <input id="textInput" type="text" disabled autocomplete="off"
-              placeholder="Atau ketik jawaban di sini (cadangan jika mic tidak tersedia)…"
-              class="flex-1 min-w-0 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-100" />
-            <button id="sendBtn" type="submit" disabled
-              class="px-4 py-2 rounded-lg bg-slate-700 text-white text-sm hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed">Kirim</button>
+          <form id="textForm" class="mt-3 flex items-center gap-3">
+            <input id="textInput" type="text" disabled autocomplete="off" placeholder="Atau ketik jawaban…"
+              class="flex-1 min-w-0 bg-transparent border-0 border-b border-line focus:border-ink focus:outline-none py-2 text-sm placeholder:text-mute disabled:opacity-50" />
+            <button id="sendBtn" type="submit" disabled class="link">Kirim</button>
           </form>
+          <p id="sttWarn" class="hidden mt-2 text-xs tone-rec"></p>
         </div>
       </section>
     </main>
@@ -244,13 +290,13 @@
   <div id="zoomView" class="hidden fixed inset-0 z-40 flex flex-col bg-[#1a1a1a] text-white select-none">
     <div class="h-11 shrink-0 flex items-center justify-between gap-3 px-3 sm:px-4 text-xs text-slate-300 border-b border-white/5">
       <div class="flex items-center gap-2 min-w-0">
-        <span class="text-emerald-400">🔒</span>
+        <svg class="w-3.5 h-3.5 text-emerald-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
         <span class="truncate font-medium text-slate-100">Seleksi Substansi LPDP · Ruang Wawancara</span>
       </div>
       <div class="flex items-center gap-3 shrink-0">
         <span id="zRec" class="hidden items-center gap-1 text-red-400 font-semibold"><span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>REC</span>
         <span id="zTimer" class="tabular-nums">00:00</span>
-        <span class="hidden sm:inline">👥 4 peserta</span>
+        <span class="hidden sm:inline">4 peserta</span>
       </div>
     </div>
 
@@ -258,26 +304,26 @@
       <div class="flex-1 min-w-0 flex flex-col p-2 sm:p-3 gap-2">
         <div class="flex-1 min-h-0 grid grid-cols-2 grid-rows-2 gap-2 sm:gap-3">
         <div id="zTile-psy" class="ztile relative rounded-xl bg-[#262626] overflow-hidden flex items-center justify-center">
-          <div class="w-16 h-16 sm:w-24 sm:h-24 lg:w-28 lg:h-28 rounded-full bg-violet-600 flex items-center justify-center text-xl sm:text-3xl font-semibold">PS</div>
+          <div class="w-16 h-16 sm:w-24 sm:h-24 lg:w-28 lg:h-28 rounded-full bg-psy flex items-center justify-center text-xl sm:text-3xl font-serif">PS</div>
           <div class="absolute left-2 bottom-2 flex items-center gap-1.5 bg-black/60 rounded px-2 py-1 text-xs max-w-[90%]">
             <span class="zmic shrink-0"></span><span class="zname truncate">Psikolog</span><span class="zwave hidden"><i></i><i></i><i></i></span>
           </div>
         </div>
         <div id="zTile-aca" class="ztile relative rounded-xl bg-[#262626] overflow-hidden flex items-center justify-center">
-          <div class="w-16 h-16 sm:w-24 sm:h-24 lg:w-28 lg:h-28 rounded-full bg-amber-600 flex items-center justify-center text-xl sm:text-3xl font-semibold">AK</div>
+          <div class="w-16 h-16 sm:w-24 sm:h-24 lg:w-28 lg:h-28 rounded-full bg-aca flex items-center justify-center text-xl sm:text-3xl font-serif">AK</div>
           <div class="absolute left-2 bottom-2 flex items-center gap-1.5 bg-black/60 rounded px-2 py-1 text-xs max-w-[90%]">
             <span class="zmic shrink-0"></span><span class="zname truncate">Akademisi</span><span class="zwave hidden"><i></i><i></i><i></i></span>
           </div>
         </div>
         <div id="zTile-lpdp" class="ztile relative rounded-xl bg-[#262626] overflow-hidden flex items-center justify-center">
-          <div class="w-16 h-16 sm:w-24 sm:h-24 lg:w-28 lg:h-28 rounded-full bg-sky-700 flex items-center justify-center text-xl sm:text-3xl font-semibold">LP</div>
+          <div class="w-16 h-16 sm:w-24 sm:h-24 lg:w-28 lg:h-28 rounded-full bg-lpdp flex items-center justify-center text-xl sm:text-3xl font-serif">LP</div>
           <div class="absolute left-2 bottom-2 flex items-center gap-1.5 bg-black/60 rounded px-2 py-1 text-xs max-w-[90%]">
             <span class="zmic shrink-0"></span><span class="zname truncate">Panelis LPDP</span><span class="zwave hidden"><i></i><i></i><i></i></span>
           </div>
         </div>
         <div id="zTile-self" class="ztile relative rounded-xl bg-[#262626] overflow-hidden flex items-center justify-center">
           <video id="zSelfVideo" class="hidden absolute inset-0 w-full h-full object-cover -scale-x-100" autoplay playsinline muted></video>
-          <div id="zSelfAvatar" class="w-16 h-16 sm:w-24 sm:h-24 lg:w-28 lg:h-28 rounded-full bg-indigo-600 flex items-center justify-center text-xl sm:text-3xl font-semibold">A</div>
+          <div id="zSelfAvatar" class="w-16 h-16 sm:w-24 sm:h-24 lg:w-28 lg:h-28 rounded-full bg-ink2 flex items-center justify-center text-xl sm:text-3xl font-serif">A</div>
           <div class="absolute left-2 bottom-2 flex items-center gap-1.5 bg-black/60 rounded px-2 py-1 text-xs max-w-[90%]">
             <span class="zmic shrink-0"></span><span class="zname truncate">Anda</span><span class="zwave hidden"><i></i><i></i><i></i></span>
           </div>
@@ -288,13 +334,15 @@
         </div>
       </div>
 
-      <aside id="zChatPanel" class="hidden absolute inset-0 z-10 sm:static sm:inset-auto w-full sm:w-96 shrink-0 flex-col bg-white text-slate-800 select-text">
-        <div class="flex items-center justify-between px-4 py-2.5 border-b border-slate-200">
-          <span class="font-semibold text-sm">Chat &amp; Transkrip</span>
-          <button id="zChatClose" type="button" class="text-slate-500 hover:text-slate-800 text-lg leading-none" title="Tutup">✕</button>
+      <aside id="zChatPanel" class="hidden absolute inset-0 z-10 sm:static sm:inset-auto w-full sm:w-[26rem] shrink-0 flex-col bg-sheet text-ink select-text">
+        <div class="flex items-center justify-between px-5 h-12 border-b border-line">
+          <span class="label">Transkrip</span>
+          <button id="zChatClose" type="button" class="text-mute hover:text-ink" title="Tutup">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          </button>
         </div>
         <div id="zChatBody" class="flex-1 min-h-0 flex flex-col">
-          <div id="zFormSlot" class="p-3 border-t border-slate-200"></div>
+          <div id="zFormSlot" class="px-5 py-3 border-t border-line"></div>
         </div>
       </aside>
     </div>
@@ -322,7 +370,7 @@
   </div>
 
   <!-- Toast -->
-  <div id="toast" class="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 hidden max-w-md w-[calc(100%-2rem)] rounded-lg bg-slate-900 text-white text-sm px-4 py-3 shadow-lg"></div>
+  <div id="toast" role="status" class="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 hidden max-w-md w-[calc(100%-2rem)] rounded-[4px] bg-[#1f1d19] text-[#f3efe7] text-sm px-4 py-3"></div>
 
 <script>
 (() => {
@@ -355,7 +403,7 @@
         '6) Fakta yang harus saya verifikasi sebelum sesi berikutnya.\n' +
         '7) Tiga pertanyaan dengan jawaban paling lemah untuk diulang, dan rencana latihan 3 hari.\n' +
         '8) Skor akhir keseluruhan (0-100) dan prediksi hasil: Lulus / Borderline / Tidak Lulus.',
-      evalDisplay: '⏹ Saya minta wawancara diakhiri. Mohon berikan evaluasi dan skor.',
+      evalDisplay: 'Saya minta wawancara diakhiri. Mohon berikan evaluasi dan skor.',
       noVoice: 'Tidak ditemukan suara Bahasa Indonesia di browser ini. Gunakan Google Chrome / Microsoft Edge untuk suara yang lebih baik.'
     },
     en: {
@@ -381,7 +429,7 @@
         '6) Facts I must verify before the next session.\n' +
         '7) The three questions with the weakest answers to repeat, and a 3-day practice plan.\n' +
         '8) Overall final score (0-100) and predicted outcome: Pass / Borderline / Fail.',
-      evalDisplay: '⏹ I would like to end the interview. Please give the evaluation and score.',
+      evalDisplay: 'I would like to end the interview. Please give the evaluation and score.',
       noVoice: 'No English voice found in this browser.'
     }
   };
@@ -437,7 +485,7 @@
   const curLang = () => (LANG[els.lang.value] ? els.lang.value : 'id');
   const modelName = () => (els.model.value === '__custom' ? els.customModel.value.trim() : els.model.value);
   const syncCustomModel = () => els.customModel.classList.toggle('hidden', els.model.value !== '__custom');
-  const nowTime = () => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const nowTime = () => { const d = new Date(); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
 
   let toastTimer = null;
   function toast(msg, ms = 4500) {
@@ -557,10 +605,10 @@
   // ===================== UI =====================
   function setStatus(text, color = 'slate') {
     const colors = {
-      slate: 'bg-slate-300', green: 'bg-emerald-400', red: 'bg-red-500 animate-pulse',
-      amber: 'bg-amber-400 animate-pulse', blue: 'bg-sky-400 animate-pulse'
+      slate: 'bg-mute', green: 'bg-accent', red: 'bg-rec animate-pulse',
+      amber: 'bg-warn animate-pulse', blue: 'bg-aca animate-pulse'
     };
-    els.statusDot.className = 'w-2.5 h-2.5 rounded-full ' + (colors[color] || colors.slate);
+    els.statusDot.className = 'w-2 h-2 rounded-full ' + (colors[color] || colors.slate);
     els.statusText.textContent = text;
   }
 
@@ -570,12 +618,12 @@
   }
 
   function computeStatus() {
-    if (state.holding) return setStatus('Mendengarkan…', 'red');
-    if (state.busy) return setStatus('Panel sedang berpikir…', 'amber');
-    if (state.speaking) return setStatus('Panel berbicara…', 'blue');
-    if (state.phase === 'active') return setStatus('Giliran Anda menjawab', 'green');
-    if (state.phase === 'ended') return setStatus('Wawancara selesai', 'slate');
-    setStatus('Belum dimulai', 'slate');
+    if (state.holding) return setStatus('Merekam', 'red');
+    if (state.busy) return setStatus('Panel menimbang', 'amber');
+    if (state.speaking) return setStatus('Panel bicara', 'blue');
+    if (state.phase === 'active') return setStatus('Giliran Anda', 'green');
+    if (state.phase === 'ended') return setStatus('Selesai', 'slate');
+    setStatus('Siap', 'slate');
   }
 
   function updateControls() {
@@ -585,7 +633,8 @@
     els.textInput.disabled = !active || state.busy;
     els.sendBtn.disabled = !active || state.busy;
     els.startBtn.disabled = state.busy && active;
-    els.startBtn.textContent = state.phase === 'idle' ? '▶ Mulai Wawancara' : '↻ Mulai Ulang';
+    els.startBtn.textContent = state.phase === 'idle' ? 'Mulai sesi' : 'Mulai ulang';
+    els.startBtn.className = 'btn ' + (state.phase === 'active' ? 'btn-ghost' : 'btn-primary');
     els.downloadBtn.disabled = state.transcript.length === 0;
     els.stopTtsBtn.classList.toggle('hidden', !state.speaking);
     // Knowledge base & session mode are fixed while an interview is running
@@ -613,35 +662,57 @@
     if (els.emptyState && els.emptyState.parentNode) els.emptyState.remove();
   }
 
+  // One transcript row: speaker label (+time) on the left, text on the right (stacked on phones)
+  function turnRow(labelHtml, time, bodyHtml) {
+    return `<div class="grid sm:grid-cols-[8.5rem_1fr] gap-x-6 gap-y-1">
+        <div class="flex items-baseline gap-3 sm:block sm:pt-[5px]">${labelHtml}${time ? `<div class="font-mono text-[11px] text-mute sm:mt-0.5">${escapeHtml(time)}</div>` : ''}</div>
+        <div class="min-w-0">${bodyHtml}</div>
+      </div>`;
+  }
+
+  // Split a panel reply into rows per panelist ("Psikolog: ...", "**Akademisi:** ...")
+  const BOLD_LABEL_RE = /\*\*\s*((?:Panelis|Perwakilan)\s+LPDP|LPDP\s+(?:Panelist|Representative)|Psikolog|Psychologist|Akademisi|Academician|Academic)(\s*\([^)]{0,40}\))?\s*:\s*\*\*/gi;
+  function panelSegments(text) {
+    const segs = splitSpeakers(String(text).replace(BOLD_LABEL_RE, '$1$2:'));
+    if (!segs.length) return [{ label: '', speaker: 'lpdp', text: String(text) }];
+    return segs;
+  }
+
   function addMessage(who, text, opts = {}) {
     hideEmptyState();
     const time = opts.time || nowTime();
     const wrap = document.createElement('div');
     if (who === 'system') {
-      wrap.className = 'flex justify-center';
-      wrap.innerHTML = `<div class="text-xs text-slate-500 bg-slate-200/70 rounded-full px-3 py-1">${escapeHtml(text)}</div>`;
-    } else {
-      const isUser = who === 'user';
-      wrap.className = 'flex ' + (isUser ? 'justify-end' : 'justify-start');
-      const bubbleCls = isUser
-        ? 'bg-indigo-600 text-white rounded-2xl rounded-br-sm'
-        : (opts.isEval ? 'bg-emerald-50 border border-emerald-300 text-slate-800 rounded-2xl rounded-bl-sm'
-                       : 'bg-white border border-slate-200 text-slate-800 rounded-2xl rounded-bl-sm');
-      const label = isUser ? '🧑‍🎓 Anda' : (opts.isEval ? '📊 Evaluasi Panel' : '👥 Panel LPDP');
-      const body = isUser ? `<p>${escapeHtml(text)}</p>` : renderMarkdown(text);
+      wrap.className = 'flex items-center gap-3 py-3 font-mono text-[11px] uppercase tracking-[0.08em] text-mute';
+      wrap.innerHTML = `<span class="h-px flex-1 bg-line"></span><span class="text-center max-w-[80%]">${escapeHtml(text)}</span><span class="h-px flex-1 bg-line"></span>`;
+    } else if (who === 'user') {
+      wrap.className = 'py-4 border-b border-line2';
+      wrap.innerHTML = turnRow(`<div class="label tone-ink">${curLang() === 'en' ? 'You' : 'Anda'}</div>`, time,
+        `<p class="text-[0.975rem] leading-relaxed text-ink2 whitespace-pre-wrap">${escapeHtml(text)}</p>`);
+      state.transcript.push({ who: 'Kandidat', text, time });
+    } else if (opts.isEval) {
+      wrap.className = 'my-6 border border-line bg-paper rounded-[6px] px-5 py-5 sm:px-7';
       wrap.innerHTML = `
-        <div class="max-w-[85%] ${bubbleCls} px-4 py-2.5 shadow-sm">
-          <div class="flex items-center justify-between gap-3 text-[11px] mb-1 ${isUser ? 'text-indigo-200' : 'text-slate-400'}">
-            <span class="font-semibold">${label}</span><span>${time}</span>
-          </div>
-          <div class="msg-body text-sm leading-relaxed">${body}</div>
-          ${!isUser ? '<button type="button" class="replay mt-1 text-[11px] text-indigo-600 hover:underline">🔊 Putar ulang</button>' : ''}
-        </div>`;
-      if (!isUser) {
-        wrap.querySelector('.replay').addEventListener('click', () => speak(text, true));
-      }
-      state.transcript.push({ who: isUser ? 'Kandidat' : (opts.isEval ? 'Evaluasi Panel' : 'Panel'), text, time });
+        <div class="flex items-baseline justify-between gap-4 pb-3 mb-4 border-b border-line">
+          <h3 class="font-serif text-xl text-ink">${curLang() === 'en' ? 'Evaluation report' : 'Laporan evaluasi'}</h3>
+          <span class="font-mono text-[11px] text-mute">${escapeHtml(time)}</span>
+        </div>
+        <div class="msg-body font-serif text-[1rem] leading-relaxed text-ink">${renderMarkdown(text)}</div>
+        <button type="button" class="replay link mt-4">Bacakan laporan</button>`;
+      state.transcript.push({ who: 'Evaluasi Panel', text, time });
+    } else {
+      wrap.className = 'py-4 border-b border-line2 space-y-3';
+      const segs = panelSegments(text);
+      wrap.innerHTML = segs.map((sg, i) => turnRow(
+        `<div class="label ${sg.label ? 'tone-' + sg.speaker : ''}">${escapeHtml(sg.label ? panelName(sg.speaker) : 'Panel')}</div>`,
+        i === 0 ? time : '',
+        `<div class="msg-body font-serif text-[1.05rem] leading-relaxed text-ink">${renderMarkdown(sg.text)}</div>` +
+          (i === segs.length - 1 ? '<button type="button" class="replay link text-xs mt-2">Putar ulang</button>' : '')
+      )).join('');
+      state.transcript.push({ who: 'Panel', text, time });
     }
+    const replay = wrap.querySelector('.replay');
+    if (replay) replay.addEventListener('click', () => speak(text, true));
     els.chatLog.appendChild(wrap);
     scrollToBottom();
     if (zoom.on && !zoom.chatOpen && who !== 'system') { zoom.unread++; renderUnread(); }
@@ -652,11 +723,11 @@
   function addError(message, onRetry) {
     hideEmptyState();
     const wrap = document.createElement('div');
-    wrap.className = 'flex justify-center';
+    wrap.className = 'py-3';
     wrap.innerHTML = `
-      <div class="max-w-[90%] bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-2">
-        <b>⚠ Gagal menghubungi Gemini:</b> <span class="msg"></span>
-        ${onRetry ? '<button type="button" class="retry ml-2 underline font-semibold">Coba lagi</button>' : ''}
+      <div class="err-box text-sm text-ink2 leading-relaxed">
+        <span class="font-medium tone-rec">Gagal menghubungi Gemini.</span> <span class="msg"></span>
+        ${onRetry ? '<button type="button" class="retry link ml-1">Coba lagi</button>' : ''}
       </div>`;
     wrap.querySelector('.msg').textContent = message;
     if (onRetry) {
@@ -675,8 +746,10 @@
     hideTyping();
     hideEmptyState();
     typingEl = document.createElement('div');
-    typingEl.className = 'flex justify-start';
-    typingEl.innerHTML = '<div class="bg-white border border-slate-200 rounded-2xl rounded-bl-sm px-4 py-3 text-slate-400 shadow-sm"><span class="dot-typing"><span></span><span></span><span></span></span><span class="typing-note ml-2 text-xs text-amber-600"></span></div>';
+    typingEl.className = 'py-4';
+    typingEl.innerHTML = turnRow('<div class="label">Panel</div>', '',
+      '<p class="font-serif italic text-mute">sedang menimbang jawaban <span class="dot-typing"><span></span><span></span><span></span></span></p>' +
+      '<p class="typing-note mt-1 font-mono text-[11px] tone-warn"></p>');
     els.chatLog.appendChild(typingEl);
     scrollToBottom();
   }
@@ -693,12 +766,11 @@
     removeLiveBubble();
     hideEmptyState();
     liveEl = document.createElement('div');
-    liveEl.className = 'flex justify-end';
-    liveEl.innerHTML = `
-      <div class="max-w-[85%] bg-indigo-100 border border-indigo-300 text-indigo-900 rounded-2xl rounded-br-sm px-4 py-2.5 shadow-sm">
-        <div class="live-head text-[11px] mb-1 text-indigo-500 font-semibold tabular-nums">🎙️ Mendengarkan… 0:00</div>
-        <div class="live-text text-sm leading-relaxed italic text-indigo-400">(mulai bicara)</div>
-      </div>`;
+    liveEl.className = 'py-4 border-b border-line2';
+    liveEl.innerHTML = turnRow(
+      `<div class="label tone-rec flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-rec animate-pulse"></span>${curLang() === 'en' ? 'You' : 'Anda'}</div>`, '',
+      '<div class="live-head font-mono text-[11px] text-mute mb-1">MEREKAM 0:00</div>' +
+      '<p class="live-text text-[0.975rem] leading-relaxed italic text-mute">(mulai bicara)</p>');
     els.chatLog.appendChild(liveEl);
     scrollToBottom();
   }
@@ -707,15 +779,15 @@
     if (!liveEl) return;
     const clock = answerClock();
     const head = liveEl.querySelector('.live-head');
-    head.className = 'live-head text-[11px] mb-1 font-semibold tabular-nums ' +
-      (clock.tone === 'red' ? 'text-red-600' : clock.tone === 'amber' ? 'text-amber-600' : 'text-indigo-500');
-    head.textContent = `🎙️ Mendengarkan… ${clock.label}` + (clock.note ? ` · ${clock.note}` : '');
+    head.className = 'live-head font-mono text-[11px] mb-1 ' +
+      (clock.tone === 'red' ? 'tone-rec' : clock.tone === 'amber' ? 'tone-warn' : 'text-mute');
+    head.textContent = `MEREKAM ${clock.label}` + (clock.note ? ` · ${clock.note}` : '');
     const box = liveEl.querySelector('.live-text');
     const fin = state.finalText.trim();
     const intr = state.interimText.trim();
-    if (!fin && !intr) { box.textContent = '(mulai bicara)'; box.className = 'live-text text-sm leading-relaxed italic text-indigo-400'; return; }
-    box.className = 'live-text text-sm leading-relaxed';
-    box.innerHTML = `${escapeHtml(fin)} <span class="italic text-indigo-400">${escapeHtml(intr)}</span>`;
+    if (!fin && !intr) { box.textContent = '(mulai bicara)'; box.className = 'live-text text-[0.975rem] leading-relaxed italic text-mute'; return; }
+    box.className = 'live-text text-[0.975rem] leading-relaxed text-ink2';
+    box.innerHTML = `${escapeHtml(fin)} <span class="italic text-mute">${escapeHtml(intr)}</span>`;
     scrollToBottom();
   }
   function removeLiveBubble() { if (liveEl) { liveEl.remove(); liveEl = null; } }
@@ -815,16 +887,15 @@
     const d = loadSavedSession();
     if (!d) return;
     const banner = document.createElement('div');
-    banner.className = 'flex justify-center';
+    banner.className = 'pb-4';
     const msgs = d.transcript.length;
-    const status = d.phase === 'ended' ? 'sudah dievaluasi' : 'belum selesai';
+    const status = d.phase === 'ended' ? 'sudah dinilai' : 'belum selesai';
     banner.innerHTML = `
-      <div class="w-full max-w-md bg-white border border-indigo-200 rounded-xl p-4 text-sm shadow-sm text-center">
-        <p class="font-semibold text-slate-700">💾 Ada sesi wawancara tersimpan</p>
-        <p class="text-xs text-slate-500 mt-1">${msgs} pesan · ${status} · ${escapeHtml(new Date(d.savedAt).toLocaleString())}</p>
-        <div class="mt-3 flex gap-2 justify-center">
-          <button type="button" class="resume px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700">Lanjutkan sesi</button>
-          <button type="button" class="discard px-3 py-1.5 rounded-lg border border-slate-300 text-xs hover:bg-slate-50">Buang</button>
+      <div class="border border-line bg-paper rounded-[6px] px-4 py-3 text-sm flex flex-wrap items-center gap-x-4 gap-y-2">
+        <p class="text-ink2 flex-1 min-w-[12rem]">Sesi sebelumnya tersimpan: ${msgs} pesan, ${status}, <span class="font-mono text-xs text-mute">${escapeHtml(new Date(d.savedAt).toLocaleString())}</span>.</p>
+        <div class="flex items-center gap-4">
+          <button type="button" class="resume btn btn-primary h-8 px-3 text-xs">Lanjutkan</button>
+          <button type="button" class="discard link">Buang</button>
         </div>
       </div>`;
     banner.querySelector('.resume').addEventListener('click', () => {
@@ -934,24 +1005,24 @@
 
   function renderKbStatus() {
     const loaded = !!(kb.knowledge || kb.protocol);
-    els.kbStatus.className = 'text-xs rounded-lg px-3 py-2 border ' +
-      (loaded ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-amber-50 text-amber-800 border-amber-200');
+    els.kbStatus.className = 'border-l-2 pl-3 text-[13px] leading-relaxed ' + (loaded ? 'kb-ok' : 'kb-missing');
     if (!loaded) {
-      els.kbStatus.textContent = '⚠ Belum dimuat. Panel hanya memakai system prompt umum.';
+      els.kbStatus.innerHTML = '<p class="text-ink2">Belum ada berkas.</p>' +
+        '<p class="text-xs text-mute mt-0.5">Tanpa berkas, panel tidak mengenal CV, esai, dan riwayat Anda.</p>';
       return;
     }
     const estTokens = Math.round(buildSystemPrompt().length / 4);
-    const parts = [];
-    parts.push(`<b>✅ Dimuat</b> dari ${escapeHtml(kb.source)}`);
-    parts.push(`<div class="mt-1 break-all">${kb.names.map((n) => '• ' + escapeHtml(n)).join('<br>')}</div>`);
-    if (!kb.knowledge) parts.push('<div class="mt-1 text-amber-700">⚠ File basis pengetahuan belum ada (hanya protokol).</div>');
-    if (!kb.protocol) parts.push('<div class="mt-1 text-amber-700">⚠ File Sistem_Prompt belum ada (hanya basis pengetahuan).</div>');
-    parts.push(`<div class="mt-1 text-slate-500">Konteks ≈ ${fmtNum(estTokens)} token per giliran (estimasi)</div>`);
+    let html = `<p class="text-ink2">Termuat dari ${escapeHtml(kb.source)}</p>`;
+    html += `<ul class="mt-1 font-mono text-[11px] text-mute break-all">${kb.names.map((n) => `<li>${escapeHtml(n.replace(/^raw\//, ''))}</li>`).join('')}</ul>`;
+    if (!kb.knowledge) html += '<p class="mt-1 text-xs tone-warn">Basis pengetahuan belum ada, hanya protokol.</p>';
+    if (!kb.protocol) html += '<p class="mt-1 text-xs tone-warn">Protokol sesi belum ada, hanya basis pengetahuan.</p>';
+    html += `<p class="mt-1 font-mono text-[11px] text-mute">≈ ${fmtNum(estTokens)} token/giliran`;
     if (lastUsage) {
-      parts.push(`<div class="text-slate-500">Giliran terakhir: ${fmtNum(lastUsage.promptTokenCount)} token input` +
-        (lastUsage.cachedContentTokenCount ? `, ${fmtNum(lastUsage.cachedContentTokenCount)} dari cache` : '') + '</div>');
+      html += ` · terakhir ${fmtNum(lastUsage.promptTokenCount)}` +
+        (lastUsage.cachedContentTokenCount ? ` (${fmtNum(lastUsage.cachedContentTokenCount)} dari cache)` : '');
     }
-    els.kbStatus.innerHTML = parts.join('');
+    html += '</p>';
+    els.kbStatus.innerHTML = html;
   }
 
   function showUsage(usage) {
@@ -1447,7 +1518,7 @@
       const t = (state.finalText + ' ' + state.interimText).trim();
       const clock = answerClock();
       const tone = clock.tone === 'red' ? 'text-red-400' : clock.tone === 'amber' ? 'text-amber-400' : 'text-slate-400';
-      html = `<span class="tabular-nums ${tone} mr-1">⏱ ${clock.label}</span><span class="font-semibold text-sky-300">${escapeHtml(me)}:</span> ` +
+      html = `<span class="font-mono tabular-nums ${tone} mr-2">${clock.label}</span><span class="font-semibold text-sky-300">${escapeHtml(me)}:</span> ` +
         (t ? escapeHtml(t) : '<span class="italic text-slate-400">(mendengarkan…)</span>');
     } else if (zoom.caption) {
       html = `<span class="font-semibold text-emerald-300">${escapeHtml(zoom.caption.who)}:</span> ${escapeHtml(zoom.caption.text)}`;
@@ -1584,13 +1655,12 @@
 
   const isToggleMic = () => els.micMode.value === 'toggle';
   function micLabel(on, short) {
-    if (isToggleMic()) return on ? (short ? 'Kirim' : 'Klik untuk Kirim') : (short ? 'Bicara' : 'Klik untuk Bicara');
-    return on ? (short ? 'Lepas' : 'Lepas untuk Kirim') : (short ? 'Tahan' : 'Tahan untuk Bicara');
+    if (isToggleMic()) return on ? (short ? 'Kirim' : 'Klik untuk kirim') : (short ? 'Bicara' : 'Klik untuk bicara');
+    return on ? (short ? 'Lepas' : 'Lepas untuk kirim') : (short ? 'Tahan' : 'Tahan untuk bicara');
   }
 
   function setMicUI(on) {
-    els.micBtn.classList.toggle('mic-active', on);
-    els.micBtn.classList.toggle('bg-red-700', on);
+    els.micBtn.classList.toggle('is-rec', on);
     els.micLabel.textContent = micLabel(on, false);
     refreshStatus();
   }
@@ -1731,6 +1801,7 @@
   function bindEvents() {
     els.toggleKey.addEventListener('click', () => {
       els.apiKey.type = els.apiKey.type === 'password' ? 'text' : 'password';
+      els.toggleKey.textContent = els.apiKey.type === 'password' ? 'Lihat' : 'Tutup';
     });
     els.apiKey.addEventListener('change', saveSettings);
     els.rememberKey.addEventListener('change', saveSettings);
@@ -1854,7 +1925,7 @@
 
     recognition = initRecognition();
     if (!recognition) {
-      els.sttWarn.textContent = '⚠ Browser ini tidak mendukung Web Speech API (speech-to-text). Gunakan Google Chrome atau Microsoft Edge. Anda tetap bisa mengetik jawaban.';
+      els.sttWarn.textContent = 'Browser ini tidak mendukung Web Speech API (speech-to-text). Gunakan Google Chrome atau Microsoft Edge. Anda tetap bisa mengetik jawaban.';
       els.sttWarn.classList.remove('hidden');
     }
     if (!synth) {

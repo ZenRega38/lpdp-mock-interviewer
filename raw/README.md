@@ -19,7 +19,7 @@ Aplikasi mengirim isi file ke Gemini apa adanya, dengan beberapa aturan khusus b
 
 | Heading / pola | Perlakuan |
 |---|---|
-| `- Nama: <nama lengkap>, ...` | Dipakai sebagai nama Anda di tampilan Mode Zoom. |
+| `- Nama: <nama lengkap>, ...` | Dipakai sebagai nama Anda di tampilan Ruang rapat. |
 | `### 2.10 ...` (faktor pribadi sensitif) | **Tidak dikirim** ke AI kecuali Mode Sensitif (Kategori S) dipilih. |
 | `### Kategori S ...` (pertanyaan sensitif) | **Tidak dikirim** kecuali Mode Sensitif dipilih. |
 | `## 10. ...` (daftar sumber) | Selalu dibuang untuk menghemat token. |
@@ -30,6 +30,6 @@ Kategori bank pertanyaan yang dipakai Mode Sesi: **A** Pembuka, **B** Motivasi &
 ## Cara memuat
 
 - **Lokal:** letakkan file di folder ini, jalankan `python -m http.server 8000` dari root proyek, lalu buka `http://localhost:8000`. File dimuat otomatis.
-- **Online (GitHub Pages) / file://:** klik **📂 Pilih file .md…** di panel *Knowledge Base & Mode Sesi*, lalu pilih file Anda. Isinya disimpan di `localStorage` browser Anda saja (tombol **Hapus** untuk membersihkan).
+- **Online (GitHub Pages) / file://:** klik **Pilih file…** di bagian *Berkas kandidat*, lalu pilih file Anda. Isinya disimpan di `localStorage` browser Anda saja (tombol **Hapus** untuk membersihkan).
 
 Isi knowledge base dikirim ke Google Gemini sebagai bagian dari system prompt setiap giliran (sekitar 45 ribu token untuk file contoh). Jangan memuat data yang tidak ingin Anda kirim ke Google.
