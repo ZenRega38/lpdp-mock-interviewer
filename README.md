@@ -14,6 +14,7 @@ Semuanya berjalan **di browser**, dalam satu file `index.html`, tanpa backend.
 - **Ruang rapat.** Tampilan ala Zoom: tiga panelis dengan kamera mati, kamera Anda menyala, penanda pembicara aktif, suara berbeda per panelis, *live caption*, dan panel chat.
 - **Knowledge base pribadi.** Panel memakai profil, berkas, dan bank pertanyaan Anda (lihat [`raw/README.md`](raw/README.md)).
 - **Mode sesi.** Sesi penuh (±45 menit), fokus per kategori (A sampai N, S), audit berkas, dan sesi tekanan.
+- **Nada panel.** *Standar*, *Tinggi*, atau *Ekstrem* (default). Di mode Ekstrem, Akademisi dan Panelis LPDP menyela, sinis, dan menyerang jawaban lemah seperti *stress interview*, sedangkan Psikolog mengamati. Tekanan hanya pada jawaban dan klaim, tidak menyentuh hal pribadi (agama, suku, keluarga, ekonomi). Katakan "jeda" untuk menghentikannya.
 - **Evaluasi akhir.** Skor per panelis (0–100), rubrik tujuh dimensi (1–5), ID pertanyaan, tanda merah, fakta yang perlu diverifikasi, dan rencana latihan 3 hari.
 - **Tahan gangguan.** Coba ulang otomatis saat terkena *rate limit* (429) atau server sibuk, sesi tersimpan otomatis (bisa dilanjutkan setelah *refresh*), dan transkrip bisa diunduh.
 - Bahasa **Indonesia / English**, pilihan model Gemini, suara, dan kecepatan bicara.

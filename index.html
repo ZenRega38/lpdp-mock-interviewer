@@ -185,6 +185,15 @@
             </select>
             <p id="sensitiveNote" class="hidden mt-2 text-xs tone-rec leading-relaxed">Data pribadi sensitif dari berkas Anda ikut dikirim ke Gemini. Katakan "berhenti" kapan saja.</p>
           </div>
+          <div>
+            <label for="pressure" class="block text-ink2 mb-1">Nada panel</label>
+            <select id="pressure" class="field">
+              <option value="standard">Standar: tenang, skeptis</option>
+              <option value="high">Tinggi: tegas dan kritis</option>
+              <option value="extreme" selected>Ekstrem: menekan, nyaris intimidatif</option>
+            </select>
+            <p id="pressureNote" class="mt-1.5 text-xs text-mute leading-relaxed">Akademisi dan Panelis LPDP akan menyela, sinis, dan menyerang jawaban lemah, tapi tidak menyentuh hal pribadi. Katakan "jeda" untuk menghentikan tekanan.</p>
+          </div>
           <div class="grid grid-cols-2 gap-3">
             <div>
               <label for="lang" class="block text-ink2 mb-1">Bahasa</label>
@@ -458,6 +467,7 @@
     textForm: $('textForm'), textInput: $('textInput'), sendBtn: $('sendBtn'),
     stopTtsBtn: $('stopTtsBtn'), downloadBtn: $('downloadBtn'), toast: $('toast'),
     kbStatus: $('kbStatus'), kbReload: $('kbReload'), kbFile: $('kbFile'), kbPickLabel: $('kbPickLabel'), kbClear: $('kbClear'),
+    pressure: $('pressure'), pressureNote: $('pressureNote'),
     sessionMode: $('sessionMode'), focusCat: $('focusCat'), focusWrap: $('focusWrap'), sensitiveNote: $('sensitiveNote'),
     zoomBtn: $('zoomBtn'), zoomView: $('zoomView'), zRec: $('zRec'), zTimer: $('zTimer'), zCaption: $('zCaption'),
     zTileSelf: $('zTile-self'), zSelfVideo: $('zSelfVideo'), zSelfAvatar: $('zSelfAvatar'),
@@ -596,6 +606,7 @@
       if (typeof s.tts === 'boolean') els.ttsToggle.checked = s.tts;
       if (s.micMode === 'hold' || s.micMode === 'toggle') els.micMode.value = s.micMode;
       else if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) els.micMode.value = 'toggle';
+      if (s.pressure && PRESSURE[s.pressure]) els.pressure.value = s.pressure;
       if (s.sessionMode && [...els.sessionMode.options].some((o) => o.value === s.sessionMode)) els.sessionMode.value = s.sessionMode;
       if (s.focusCat && [...els.focusCat.options].some((o) => o.value === s.focusCat)) els.focusCat.value = s.focusCat;
       if (s.apiKey) { els.apiKey.value = s.apiKey; els.rememberKey.checked = true; }
@@ -607,7 +618,8 @@
       const s = {
         lang: els.lang.value, model: els.model.value, customModel: els.customModel.value.trim(), rate: parseFloat(els.rate.value),
         tts: els.ttsToggle.checked, voice: els.voice.value,
-        sessionMode: els.sessionMode.value, focusCat: els.focusCat.value, micMode: els.micMode.value
+        sessionMode: els.sessionMode.value, focusCat: els.focusCat.value, micMode: els.micMode.value,
+        pressure: els.pressure.value
       };
       if (els.rememberKey.checked) s.apiKey = els.apiKey.value.trim();
       localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
@@ -651,6 +663,7 @@
     els.stopTtsBtn.classList.toggle('hidden', !state.speaking);
     // Knowledge base & session mode are fixed while an interview is running
     els.sessionMode.disabled = active;
+    els.pressure.disabled = active;
     els.focusCat.disabled = active;
     els.kbReload.disabled = active;
     els.kbClear.disabled = active || !(kb.knowledge || kb.protocol);
@@ -910,7 +923,7 @@
       localStorage.setItem(SESSION_KEY, JSON.stringify({
         v: 1, savedAt: Date.now(), phase: state.phase, history: state.history, transcript: state.transcript,
         questionCount: state.questionCount, elapsedMs: state.timerId ? Date.now() - state.startTime : state.elapsedMs,
-        sessionMode: els.sessionMode.value, focusCat: els.focusCat.value, lang: els.lang.value
+        sessionMode: els.sessionMode.value, focusCat: els.focusCat.value, lang: els.lang.value, pressure: els.pressure.value
       }));
     } catch { /* storage full/blocked: autosave is best-effort */ }
   }
@@ -935,6 +948,7 @@
     if (d.lang && LANG[d.lang]) { els.lang.value = d.lang; populateVoices(); }
     if ([...els.sessionMode.options].some((o) => o.value === d.sessionMode)) els.sessionMode.value = d.sessionMode;
     if ([...els.focusCat.options].some((o) => o.value === d.focusCat)) els.focusCat.value = d.focusCat;
+    if (d.pressure && PRESSURE[d.pressure]) { els.pressure.value = d.pressure; syncPressureUI(); }
     syncModeUI();
     saveSettings();
     clearChat();
@@ -1076,6 +1090,41 @@
     return out.trim();
   }
 
+  // Panel tone. Overrides the "Nada" section of the session protocol.
+  const PRESSURE_LIMITS = 'Batas yang tidak boleh dilanggar: tekanan hanya diarahkan pada jawaban, klaim, bukti, logika, dan rencana kandidat. ' +
+    'Jangan menghina atau menyinggung agama, suku, keluarga, kondisi ekonomi, penampilan, gender, atau disabilitas; tanpa makian, kata kasar, atau ancaman. ' +
+    'Jika kandidat mengatakan "jeda" atau "berhenti", hentikan tekanan dan tanyakan apakah ia ingin melanjutkan. ' +
+    'Evaluasi akhir disampaikan objektif dan tidak dengan nada menekan; nilai juga ketahanan kandidat di bawah tekanan.';
+  const PRESSURE = {
+    standard: {
+      label: 'nada standar',
+      rule: 'NADA PANEL: STANDAR. Ikuti bagian "Nada" di protokol: tenang, profesional, sedikit skeptis, tidak bermusuhan.'
+    },
+    high: {
+      label: 'nada tinggi',
+      rule: 'NADA PANEL: TINGGI (menggantikan bagian "Nada" di protokol). Akademisi dan Panelis LPDP tegas, kritis, dan tidak mudah puas: ' +
+        'langsung menunjuk kelemahan jawaban, menuntut angka dan bukti, mengulang keberatan bila jawaban mengelak, tanpa pujian. ' +
+        'Psikolog tetap tenang dan mengamati. Tetap profesional, tanpa sarkasme. ' + PRESSURE_LIMITS
+    },
+    extreme: {
+      label: 'nada ekstrem',
+      rule: 'NADA PANEL: EKSTREM, simulasi stress interview atas permintaan kandidat untuk melatih mental (menggantikan bagian "Nada" di protokol dan aturan "akui jawaban yang kuat"; jangan pernah memuji, naikkan standar setiap kali jawaban cukup baik). ' +
+        'AKADEMISI: dingin, skeptis, meremehkan klaim tanpa bukti. Potong jawaban yang bertele-tele, serang inkonsistensi teknis, tuntut metrik, angka, nama paper, dan nama dosen, lalu terus gali sampai kandidat mencapai batas pengetahuannya. ' +
+        'Sebut terus terang bila jawaban dangkal, misalnya "Itu jawaban mahasiswa semester satu.", "Saya tidak mendengar satu angka pun.", atau "Anda hanya mengulang jargon." ' +
+        'PANELIS LPDP: tajam dan sinis terhadap komitmen dan penggunaan uang negara. Tantang motif ("Kenapa negara harus membiayai Anda, bukan kandidat lain?", "Apa jaminan Anda pulang?", "Ini terdengar seperti rencana pribadi yang dibungkus nasionalisme."), konfrontasi inkonsistensi berkas secara langsung, boleh menyela dan mengulang keberatan dua kali. ' +
+        'PSIKOLOG: netral dan dingin, mengamati reaksi kandidat setelah ditekan; sesekali tanyakan bagaimana ia merespons tekanan barusan. ' +
+        'Gaya: kalimat pendek dan langsung, tanpa basa-basi pembuka, tanpa kata "bagus" atau "menarik". ' + PRESSURE_LIMITS
+    }
+  };
+  const pressureLevel = () => (PRESSURE[els.pressure.value] ? els.pressure.value : 'extreme');
+  function syncPressureUI() {
+    const v = pressureLevel();
+    els.pressureNote.classList.toggle('hidden', v === 'standard');
+    els.pressureNote.textContent = v === 'extreme'
+      ? 'Akademisi dan Panelis LPDP akan menyela, sinis, dan menyerang jawaban lemah, tapi tidak menyentuh hal pribadi. Katakan "jeda" untuk menghentikan tekanan.'
+      : 'Panel tegas dan menuntut bukti, tanpa pujian, tetap profesional.';
+  }
+
   const TIMING_RULE = 'Pesan kandidat bisa diakhiri "[Catatan sistem ...]" berisi waktu jawab sejak pertanyaan selesai dibacakan (batas ideal 90 detik). Catatan itu bukan ucapan kandidat dan tidak terlihat olehnya. Selama sesi JANGAN menyebut, mengomentari, atau menegur soal waktu; lanjutkan wawancara seperti biasa. Gunakan data waktu itu hanya di evaluasi akhir (terutama dimensi Struktur).';
 
   const PRIORITY_RULES = [
@@ -1103,6 +1152,7 @@
       (hasKb ? PRIORITY_RULES : PRIORITY_RULES.slice(0, 2)).map((r) => '- ' + r).join('\n');
     if (hasKb) p += '\n- ' + mode.instruction;
     p += '\n- ' + mode.sensitiveRule;
+    p += '\n- ' + PRESSURE[pressureLevel()].rule;
     p += '\n- ' + TIMING_RULE;
     p += LANG[curLang()].instruction;
     return p;
@@ -1885,7 +1935,7 @@
     startTimer();
     const mode = sessionMode();
     const kbLabel = kb.knowledge || kb.protocol ? 'dengan knowledge base' : 'tanpa knowledge base';
-    addMessage('system', `Wawancara dimulai · ${mode.label} · ${kbLabel} · ${els.lang.value.toUpperCase()} · ${modelName()}`);
+    addMessage('system', `Wawancara dimulai · ${mode.label} · ${PRESSURE[pressureLevel()].label} · ${kbLabel} · ${els.lang.value.toUpperCase()} · ${modelName()}`);
     focusChatOnSmallScreens();
     sendTurn(LANG[curLang()].startMsg(mode.label), { display: false });
   }
@@ -1941,6 +1991,7 @@
       if (state.phase === 'active') addMessage('system', `Bahasa diubah ke ${els.lang.value.toUpperCase()} — berlaku mulai giliran berikutnya.`);
     });
 
+    els.pressure.addEventListener('change', () => { syncPressureUI(); renderKbStatus(); saveSettings(); });
     els.sessionMode.addEventListener('change', () => { syncModeUI(); renderKbStatus(); saveSettings(); });
     els.focusCat.addEventListener('change', () => {
       syncModeUI();
@@ -2056,6 +2107,7 @@
     }
 
     syncModeUI();
+    syncPressureUI();
     bindEvents();
     renderKbStatus();
     setMicUI(false);
