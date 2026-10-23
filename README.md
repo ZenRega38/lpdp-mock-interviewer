@@ -10,7 +10,7 @@ Semuanya berjalan **di browser**, dalam satu file `index.html`, tanpa backend.
 
 - **Voice-to-voice.** Jawab dengan suara (Web Speech API), dan panel menjawab dengan suara (Speech Synthesis). Transkrip tampil secara real-time.
 - **Mode mikrofon.** *Tahan untuk bicara* (tombol atau `Spasi`) atau *klik mulai, klik kirim* (lebih nyaman di HP).
-- **Penghitung waktu jawaban.** Berubah kuning setelah 90 detik dan merah setelah 120 detik, dengan batas otomatis 3 menit.
+- **Timer jawaban 90 detik.** Muncul di pojok setelah panelis selesai bertanya. Lewat batas tidak menghentikan apa pun, hanya tampil sebagai *+detik*. Durasinya dikirim ke AI sebagai catatan tersembunyi (tidak tampil di transkrip, tidak ditegur selama sesi) dan dipakai di evaluasi akhir.
 - **Ruang rapat.** Tampilan ala Zoom: tiga panelis dengan kamera mati, kamera Anda menyala, penanda pembicara aktif, suara berbeda per panelis, *live caption*, dan panel chat.
 - **Knowledge base pribadi.** Panel memakai profil, berkas, dan bank pertanyaan Anda (lihat [`raw/README.md`](raw/README.md)).
 - **Mode sesi.** Sesi penuh (±45 menit), fokus per kategori (A sampai N, S), audit berkas, dan sesi tekanan.

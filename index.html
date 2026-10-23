@@ -237,7 +237,12 @@
       </aside>
 
       <!-- Transcript -->
-      <section id="chatSection" class="bg-sheet border border-line rounded-[6px] flex flex-col min-h-[70vh] lg:h-[calc(100vh-7rem)] scroll-mt-2">
+      <section id="chatSection" class="relative bg-sheet border border-line rounded-[6px] flex flex-col min-h-[70vh] lg:h-[calc(100vh-7rem)] scroll-mt-2">
+        <div id="answerTimer" class="hidden fixed top-3 right-3 z-30 lg:absolute lg:top-[3.75rem] lg:right-6 w-[7.5rem] bg-sheet border border-line rounded-[4px] px-3 pt-2 pb-2.5" role="timer" aria-live="off">
+          <div class="label !text-[10px]">Waktu jawab</div>
+          <div id="answerTimerValue" class="font-mono text-[1.6rem] leading-tight tabular-nums text-ink">1:30</div>
+          <div class="mt-1.5 h-[3px] bg-line2 rounded-full overflow-hidden"><div id="answerTimerBar" class="h-full bg-accent transition-[width] duration-300" style="width:100%"></div></div>
+        </div>
         <div class="flex items-center justify-between gap-4 px-5 sm:px-8 h-12 border-b border-line">
           <h2 class="label">Transkrip</h2>
           <div class="flex items-center gap-4">
@@ -255,7 +260,7 @@
               <div class="py-3 grid sm:grid-cols-[8.5rem_1fr] gap-x-6 gap-y-0.5"><dt class="label tone-aca pt-0.5">Akademisi</dt><dd class="text-ink2">Kesiapan riset, kedalaman teknis, dan alasan memilih Edinburgh.</dd></div>
               <div class="py-3 grid sm:grid-cols-[8.5rem_1fr] gap-x-6 gap-y-0.5"><dt class="label tone-lpdp pt-0.5">Panelis LPDP</dt><dd class="text-ink2">Rencana kontribusi dan komitmen kembali ke Indonesia.</dd></div>
             </dl>
-            <p class="mt-6 text-sm text-mute leading-relaxed">Isi kunci API, muat berkas kandidat, lalu tekan <span class="text-ink">Mulai sesi</span>. Saat menjawab, tahan tombol mikrofon atau <kbd>Spasi</kbd>. Usahakan setiap jawaban 30 sampai 90 detik.</p>
+            <p class="mt-6 text-sm text-mute leading-relaxed">Isi kunci API, muat berkas kandidat, lalu tekan <span class="text-ink">Mulai sesi</span>. Saat menjawab, tahan tombol mikrofon atau <kbd>Spasi</kbd>. Setelah panel selesai bertanya, hitungan 90 detik muncul di pojok; lewat dari itu akan tampil sebagai +detik dan dicatat untuk penilaian akhir.</p>
           </div>
         </div>
 
@@ -294,6 +299,7 @@
         <span class="truncate font-medium text-slate-100">Seleksi Substansi LPDP · Ruang Wawancara</span>
       </div>
       <div class="flex items-center gap-3 shrink-0">
+        <span id="zAnswerTimer" class="hidden items-center gap-1.5 font-mono tabular-nums"><span class="text-slate-400">Jawab</span><span id="zAnswerTimerValue" class="text-sm text-white">1:30</span></span>
         <span id="zRec" class="hidden items-center gap-1 text-red-400 font-semibold"><span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>REC</span>
         <span id="zTimer" class="tabular-nums">00:00</span>
         <span class="hidden sm:inline">4 peserta</span>
@@ -402,7 +408,8 @@
         '5) Tanda merah yang muncul, termasuk inkonsistensi dengan berkas.\n' +
         '6) Fakta yang harus saya verifikasi sebelum sesi berikutnya.\n' +
         '7) Tiga pertanyaan dengan jawaban paling lemah untuk diulang, dan rencana latihan 3 hari.\n' +
-        '8) Skor akhir keseluruhan (0-100) dan prediksi hasil: Lulus / Borderline / Tidak Lulus.',
+        '8) Manajemen waktu berdasarkan catatan sistem: rata-rata waktu jawab, jawaban yang melebihi 90 detik (berapa detik), dan pengaruhnya pada skor.\n' +
+        '9) Skor akhir keseluruhan (0-100) dan prediksi hasil: Lulus / Borderline / Tidak Lulus.',
       evalDisplay: 'Saya minta wawancara diakhiri. Mohon berikan evaluasi dan skor.',
       noVoice: 'Tidak ditemukan suara Bahasa Indonesia di browser ini. Gunakan Google Chrome / Microsoft Edge untuk suara yang lebih baik.'
     },
@@ -428,7 +435,8 @@
         '5) Red flags that appeared, including inconsistencies with my documents.\n' +
         '6) Facts I must verify before the next session.\n' +
         '7) The three questions with the weakest answers to repeat, and a 3-day practice plan.\n' +
-        '8) Overall final score (0-100) and predicted outcome: Pass / Borderline / Fail.',
+        '8) Time management based on the system notes: average answer time, answers over 90 seconds (by how many seconds), and the effect on the score.\n' +
+        '9) Overall final score (0-100) and predicted outcome: Pass / Borderline / Fail.',
       evalDisplay: 'I would like to end the interview. Please give the evaluation and score.',
       noVoice: 'No English voice found in this browser.'
     }
@@ -456,6 +464,8 @@
     zChatPanel: $('zChatPanel'), zChatClose: $('zChatClose'), zChatBody: $('zChatBody'), zFormSlot: $('zFormSlot'),
     zMicBtn: $('zMicBtn'), zMicIcon: $('zMicIcon'), zMicLabel: $('zMicLabel'), zCamBtn: $('zCamBtn'), zCamIcon: $('zCamIcon'), zCamLabel: $('zCamLabel'),
     micMode: $('micMode'),
+    answerTimer: $('answerTimer'), answerTimerValue: $('answerTimerValue'), answerTimerBar: $('answerTimerBar'),
+    zAnswerTimer: $('zAnswerTimer'), zAnswerTimerValue: $('zAnswerTimerValue'),
     zStartBtn: $('zStartBtn'), zStartLabel: $('zStartLabel'), zChatBtn: $('zChatBtn'), zUnread: $('zUnread'), zEndBtn: $('zEndBtn'), zExitBtn: $('zExitBtn')
   };
 
@@ -477,7 +487,9 @@
     sessionId: 0,         // invalidates in-flight requests on restart
     elapsedMs: 0,         // interview duration (kept when paused/ended/restored)
     listenStart: 0,       // when the current answer recording started
-    busyNote: ''          // e.g. "retrying in 20s" while waiting for Gemini
+    busyNote: '',         // e.g. "retrying in 20s" while waiting for Gemini
+    answerPhase: 'idle',  // idle | waiting (panel still reading the question) | running
+    answerStart: 0        // when the 90-second answer window started
   };
 
   // ===================== UTILITIES =====================
@@ -777,11 +789,7 @@
   function updateLiveBubble() {
     updateZoomUI();
     if (!liveEl) return;
-    const clock = answerClock();
-    const head = liveEl.querySelector('.live-head');
-    head.className = 'live-head font-mono text-[11px] mb-1 ' +
-      (clock.tone === 'red' ? 'tone-rec' : clock.tone === 'amber' ? 'tone-warn' : 'text-mute');
-    head.textContent = `MEREKAM ${clock.label}` + (clock.note ? ` · ${clock.note}` : '');
+    liveEl.querySelector('.live-head').textContent = `MEREKAM ${answerClock().label}`;
     const box = liveEl.querySelector('.live-text');
     const fin = state.finalText.trim();
     const intr = state.interimText.trim();
@@ -820,14 +828,78 @@
     state.elapsedMs = Date.now() - state.startTime;
   }
 
-  // Answer length guide (protokol: 30-90 detik; potong sekitar 2 menit)
-  const MAX_ANSWER_SEC = 180;
+  // Recording length shown in the live transcript row
   function answerClock() {
     const sec = state.holding && state.listenStart ? Math.floor((Date.now() - state.listenStart) / 1000) : 0;
-    const label = `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
-    if (sec >= 120) return { sec, label, tone: 'red', note: 'terlalu panjang, segera simpulkan' };
-    if (sec >= 90) return { sec, label, tone: 'amber', note: 'lewat 90 detik, mulai simpulkan' };
-    return { sec, label, tone: 'ok', note: '' };
+    return { sec, label: `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}` };
+  }
+
+  // ===================== ANSWER WINDOW (90 detik) =====================
+  // Starts when the panel has finished asking (TTS done, skipped or interrupted),
+  // keeps counting past 90 s as "+m:ss", and ends when the answer is sent.
+  // The duration goes to Gemini as a hidden note; it is never shown in the transcript.
+  const ANSWER_LIMIT_SEC = 90;
+  let answerTick = null;
+  const fmtMinSec = (sec) => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
+
+  function answerElapsedSec() {
+    return state.answerPhase === 'running' ? Math.max(0, Math.floor((Date.now() - state.answerStart) / 1000)) : 0;
+  }
+
+  // Panel reply arrived: wait until it has been read out before starting the clock
+  function armAnswerTimer() {
+    stopAnswerTimer();
+    state.answerPhase = 'waiting';
+  }
+
+  function startAnswerTimer() {
+    if (state.answerPhase !== 'waiting' || state.phase !== 'active') return;
+    state.answerPhase = 'running';
+    state.answerStart = Date.now();
+    clearInterval(answerTick);
+    answerTick = setInterval(renderAnswerTimer, 250);
+    renderAnswerTimer();
+  }
+
+  function stopAnswerTimer() {
+    clearInterval(answerTick);
+    answerTick = null;
+    state.answerPhase = 'idle';
+    state.answerStart = 0;
+    renderAnswerTimer();
+  }
+
+  // Stop the clock and describe the answer time for the AI (hidden from the transcript)
+  function takeAnswerNote() {
+    if (state.answerPhase !== 'running') { stopAnswerTimer(); return ''; }
+    const sec = answerElapsedSec();
+    stopAnswerTimer();
+    const over = sec - ANSWER_LIMIT_SEC;
+    if (curLang() === 'en') {
+      return `\n\n[System note, not spoken by the candidate: answer time ${fmtMinSec(sec)} after the question was read; ` +
+        (over > 0 ? `${over} seconds over the 90-second limit.]` : 'within the 90-second limit.]');
+    }
+    return `\n\n[Catatan sistem, bukan ucapan kandidat: waktu jawab ${fmtMinSec(sec)} sejak pertanyaan selesai dibacakan; ` +
+      (over > 0 ? `melebihi batas 90 detik sebesar ${over} detik.]` : 'masih dalam batas 90 detik.]');
+  }
+
+  function renderAnswerTimer() {
+    const running = state.answerPhase === 'running';
+    els.answerTimer.classList.toggle('hidden', !running);
+    els.zAnswerTimer.classList.toggle('hidden', !running);
+    els.zAnswerTimer.classList.toggle('flex', running);
+    if (!running) return;
+    const sec = answerElapsedSec();
+    const left = ANSWER_LIMIT_SEC - sec;
+    const text = left >= 0 ? fmtMinSec(left) : '+' + fmtMinSec(-left);
+    const tone = left < 0 ? 'tone-rec' : left <= 15 ? 'tone-warn' : 'text-ink';
+    els.answerTimerValue.textContent = text;
+    els.answerTimerValue.className = 'font-mono text-[1.6rem] leading-tight tabular-nums ' + tone;
+    els.answerTimerBar.style.width = `${Math.max(0, left) / ANSWER_LIMIT_SEC * 100}%`;
+    els.answerTimerBar.className = 'h-full transition-[width] duration-300 ' + (left <= 15 ? 'bg-warn' : 'bg-accent');
+    els.answerTimer.title = left < 0 ? `Lewat ${-left} detik dari batas 90 detik` : `Sisa ${left} detik`;
+    els.zAnswerTimerValue.textContent = text;
+    els.zAnswerTimerValue.className = 'text-sm ' + (left < 0 ? 'text-red-400' : left <= 15 ? 'text-amber-300' : 'text-white');
   }
 
   // ===================== SESSION AUTOSAVE (browser only) =====================
@@ -856,6 +928,7 @@
   function restoreSession(d) {
     cancelListening();
     stopSpeaking();
+    stopAnswerTimer();
     stopTimer();
     state.sessionId++;
     state.busy = false;
@@ -875,7 +948,12 @@
     state.questionCount = Number(d.questionCount) || 0;
     els.qCount.textContent = String(state.questionCount);
     state.phase = d.phase === 'ended' ? 'ended' : 'active';
-    if (state.phase === 'active') startTimer(Number(d.elapsedMs) || 0);
+    stopAnswerTimer();
+    if (state.phase === 'active') {
+      startTimer(Number(d.elapsedMs) || 0);
+      const last = state.history[state.history.length - 1];
+      if (last && last.role === 'model') { armAnswerTimer(); startAnswerTimer(); }
+    }
     else { state.elapsedMs = Number(d.elapsedMs) || 0; renderClock(state.elapsedMs); }
     updateControls();
     renderKbStatus();
@@ -976,6 +1054,8 @@
     return out.trim();
   }
 
+  const TIMING_RULE = 'Pesan kandidat bisa diakhiri "[Catatan sistem ...]" berisi waktu jawab sejak pertanyaan selesai dibacakan (batas ideal 90 detik). Catatan itu bukan ucapan kandidat dan tidak terlihat olehnya. Selama sesi JANGAN menyebut, mengomentari, atau menegur soal waktu; lanjutkan wawancara seperti biasa. Gunakan data waktu itu hanya di evaluasi akhir (terutama dimensi Struktur).';
+
   const PRIORITY_RULES = [
     'Persona utama di bagian paling atas (tajam, kritis, objektif, tanpa pujian basa-basi) tetap berlaku. Jika protokol menyebut "akui jawaban yang kuat", lakukan maksimal satu frasa faktual tanpa pujian, lalu lanjut bertanya.',
     'Ini simulasi wawancara SUARA secara real-time. JANGAN memberi umpan balik, skor, atau jawaban acuan selama sesi berjalan. Simpan seluruh penilaian (rubrik tujuh dimensi, Bagian 6.2) untuk evaluasi akhir ketika kandidat meminta wawancara diakhiri.',
@@ -997,6 +1077,7 @@
       (hasKb ? PRIORITY_RULES : PRIORITY_RULES.slice(0, 2)).map((r) => '- ' + r).join('\n');
     if (hasKb) p += '\n- ' + mode.instruction;
     p += '\n- ' + mode.sensitiveRule;
+    p += '\n- ' + TIMING_RULE;
     p += LANG[curLang()].instruction;
     return p;
   }
@@ -1232,10 +1313,14 @@
     if (!els.apiKey.value.trim()) { toast('Masukkan Gemini API Key terlebih dahulu.'); els.apiKey.focus(); return; }
 
     const session = state.sessionId;
+    // A real answer (shown in the transcript) closes the 90-second window; the timing note
+    // is only added to what Gemini sees, never to the transcript. Kept in opts for retries.
+    if (opts.note === undefined && opts.display !== false && !opts.isEval) opts = { ...opts, note: takeAnswerNote() };
+    if (opts.isEval) stopAnswerTimer();
     stopSpeaking();
     if (opts.display !== false) addMessage('user', opts.displayText || text);
 
-    state.history.push({ role: 'user', parts: [{ text }] });
+    state.history.push({ role: 'user', parts: [{ text: text + (opts.note || '') }] });
     state.busy = true;
     showTyping();
     updateControls();
@@ -1256,7 +1341,8 @@
         if (zoom.on) setChatOpen(true);
       }
       saveSession();
-      speak(reply);
+      if (!opts.isEval) armAnswerTimer();
+      if (!speak(reply)) startAnswerTimer(); // voice off: the window opens right away
     } catch (err) {
       if (session !== state.sessionId) return;
       hideTyping();
@@ -1348,6 +1434,7 @@
   }
 
   function stopSpeaking() {
+    const wasSpeaking = state.speaking;
     ttsSession++;
     utteranceRefs = [];
     if (synth) synth.cancel();
@@ -1355,14 +1442,16 @@
     zoom.caption = null;
     if (state.speaking) setSpeaking(false);
     else updateZoomUI();
+    // Question cut short (stop button / barge-in): the answer window starts now
+    if (wasSpeaking) startAnswerTimer();
   }
 
   function speak(text, force = false) {
-    if (!synth) return;
-    if (!force && !els.ttsToggle.checked) return;
+    if (!synth) return false;
+    if (!force && !els.ttsToggle.checked) return false;
     stopSpeaking();
     const clean = stripMarkdown(text);
-    if (!clean) return;
+    if (!clean) return false;
     const segs = splitSpeakers(clean);
     const items = [];
     segs.forEach((seg) => {
@@ -1370,7 +1459,7 @@
       const spoken = zoom.on || !seg.label ? seg.text : `${seg.label}: ${seg.text}`;
       chunkText(spoken).forEach((c) => items.push({ text: c, speaker: seg.speaker }));
     });
-    if (!items.length) return;
+    if (!items.length) return false;
     zoom.lastSpeaker = segs[segs.length - 1].speaker;
     const session = ttsSession;
     const rate = parseFloat(els.rate.value) || 1;
@@ -1399,6 +1488,7 @@
             zoom.activeSpeaker = null;
             zoom.caption = null;
             setSpeaking(false);
+            startAnswerTimer(); // question fully read: answer window opens
           };
           u.onend = done;
           u.onerror = done;
@@ -1406,7 +1496,10 @@
         utteranceRefs.push(u);
         synth.speak(u);
       });
+      // Safety net: if the browser never starts speaking, don't leave the answer window waiting
+      setTimeout(() => { if (session === ttsSession && !state.speaking) startAnswerTimer(); }, 4000);
     }, 80);
+    return true;
   }
 
   // ===================== ZOOM-LIKE MEETING VIEW =====================
@@ -1516,9 +1609,7 @@
     let html = '';
     if (holding) {
       const t = (state.finalText + ' ' + state.interimText).trim();
-      const clock = answerClock();
-      const tone = clock.tone === 'red' ? 'text-red-400' : clock.tone === 'amber' ? 'text-amber-400' : 'text-slate-400';
-      html = `<span class="font-mono tabular-nums ${tone} mr-2">${clock.label}</span><span class="font-semibold text-sky-300">${escapeHtml(me)}:</span> ` +
+      html = `<span class="font-semibold text-sky-300">${escapeHtml(me)}:</span> ` +
         (t ? escapeHtml(t) : '<span class="italic text-slate-400">(mendengarkan…)</span>');
     } else if (zoom.caption) {
       html = `<span class="font-semibold text-emerald-300">${escapeHtml(zoom.caption.who)}:</span> ${escapeHtml(zoom.caption.text)}`;
@@ -1672,11 +1763,6 @@
     state.listenStart = Date.now();
     listenTimer = setInterval(() => {
       if (!state.holding) { stopListenTimer(); return; }
-      if (answerClock().sec >= MAX_ANSWER_SEC) {
-        toast('Batas 3 menit tercapai, jawaban dikirim. Latih jawaban yang lebih ringkas (30-90 detik).', 5000);
-        stopListening();
-        return;
-      }
       updateLiveBubble();
     }, 1000);
   }
@@ -1691,6 +1777,7 @@
     if (state.phase !== 'active' || state.busy || state.holding) return;
     if (state.recognizing) { toast('Tunggu sebentar, memproses rekaman sebelumnya…', 2000); return; }
     stopSpeaking(); // barge-in: silence the panel when candidate speaks
+    startAnswerTimer(); // no-op unless the window was still waiting for the question
     state.holding = true;
     state.discardSpeech = false;
     state.finalText = '';
@@ -1761,6 +1848,7 @@
 
     state.sessionId++;
     clearSavedSession();
+    stopAnswerTimer();
     state.history = [];
     state.busy = false;
     state.questionCount = 0;
@@ -1778,6 +1866,7 @@
   function endInterview() {
     if (state.phase !== 'active' || state.busy) return;
     cancelListening();
+    stopAnswerTimer();
     const L = LANG[curLang()];
     sendTurn(L.evalMsg, { displayText: L.evalDisplay, isEval: true });
   }
