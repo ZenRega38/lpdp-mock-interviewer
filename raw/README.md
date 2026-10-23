@@ -32,4 +32,4 @@ Kategori bank pertanyaan yang dipakai Mode Sesi: **A** Pembuka, **B** Motivasi &
 - **Lokal:** letakkan file di folder ini, jalankan `python -m http.server 8000` dari root proyek, lalu buka `http://localhost:8000`. File dimuat otomatis.
 - **Online (GitHub Pages) / file://:** klik **Pilih file…** di bagian *Berkas kandidat*, lalu pilih file Anda. Isinya disimpan di `localStorage` browser Anda saja (tombol **Hapus** untuk membersihkan).
 
-Isi knowledge base dikirim ke Google Gemini sebagai bagian dari system prompt setiap giliran (sekitar 45 ribu token untuk file contoh). Jangan memuat data yang tidak ingin Anda kirim ke Google.
+Isi knowledge base dikirim ke Google Gemini sebagai bagian dari system prompt setiap giliran. Untuk menghemat token, selama sesi aplikasi tidak mengirim baris `Jawaban acuan`, `Mengapa efektif`, `Contoh klarifikasi yang jujur`, `Tindakan sebelum wawancara`, `Jika digali`, `Komitmen sebelum diucapkan`, dan `Versi A/B` (beserta kutipan `>` di bawahnya), dan pada sesi fokus/audit hanya mengirim kategori yang dipilih. Semua itu dikirim lagi saat evaluasi akhir. Jangan memuat data yang tidak ingin Anda kirim ke Google.

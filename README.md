@@ -58,7 +58,7 @@ Speech-to-text di Chrome/Edge memakai layanan cloud browser, jadi butuh koneksi 
 
 ## Catatan kuota
 
-Tier gratis Gemini memiliki batas permintaan per menit dan per hari. Dengan knowledge base lengkap, tiap giliran mengirim sekitar 45 ribu token. Jika muncul error 429, aplikasi otomatis menunggu lalu mencoba lagi; jika kuota harian habis, ganti ke model Flash-Lite.
+Tier gratis Gemini memiliki batas permintaan per menit dan per hari. Hanya teks yang dikirim ke Gemini: suara Anda diubah jadi teks oleh browser, dan balasan dibacakan oleh browser. Yang terbesar adalah knowledge base: selama sesi, jawaban acuan dan contoh klarifikasi tidak dikirim (sekitar 38 ribu token per giliran untuk sesi penuh, sekitar 18 ribu untuk sesi fokus satu kategori) dan baru disertakan saat evaluasi akhir (sekitar 58 ribu). Jika muncul error 429, aplikasi otomatis menunggu lalu mencoba lagi; jika kuota harian habis, ganti ke model Flash-Lite.
 
 ## Teknologi
 

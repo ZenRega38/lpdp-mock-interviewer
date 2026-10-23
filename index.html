@@ -1028,7 +1028,9 @@
     const sensitiveRule = sensitive
       ? 'MODE SENSITIF AKTIF atas permintaan kandidat. Nilai hanya cara kandidat menjawab (ketenangan, kejujuran, batas yang sopan), bukan keyakinan atau latar pribadinya. Hentikan segera bila kandidat meminta berhenti.'
       : 'MODE SENSITIF TIDAK AKTIF: jangan menanyakan agama, keluarga, orang tua, atau alamat domisili kandidat.';
-    return { label, instruction, sensitiveRule, sensitive };
+    // Question-bank categories to send: focus = that category only, audit = J only, otherwise all
+    const keep = mode === 'focus' ? [cat] : mode === 'audit' ? ['J'] : null;
+    return { label, instruction, sensitiveRule, sensitive, keep };
   }
 
   // Remove a markdown section (heading line + body until the next heading of same/higher level)
@@ -1044,13 +1046,33 @@
     return out.join('\n');
   }
 
-  function prepareKnowledge(md, sensitive) {
+  // Candidate-prep material the panel doesn't need while asking questions: reference answers,
+  // "why it works", sample clarifications, prep actions, answer versions. Sent again for the evaluation.
+  const PREP_MARKER_RE = /^\s*(?:-\s*)?\*\*(?:Jawaban acuan|Mengapa efektif|Jika digali|Contoh klarifikasi yang jujur|Tindakan sebelum wawancara|Komitmen sebelum diucapkan|Versi [A-Z][:\s(])/;
+  function stripPrepMaterial(md) {
+    const out = [];
+    let skipping = false;
+    for (const line of md.split('\n')) {
+      if (PREP_MARKER_RE.test(line)) { skipping = true; continue; }
+      if (skipping && (/^\s*>/.test(line) || /^\s{2,}\S/.test(line))) continue; // quoted answer / continuation
+      skipping = false;
+      out.push(line);
+    }
+    return out.join('\n');
+  }
+
+  // opts.forEval: keep reference answers (the evaluation compares against them)
+  function prepareKnowledge(md, mode, opts = {}) {
     let out = String(md).replace(/\r\n/g, '\n');
     out = removeSection(out, /^##\s+10\.\s/); // daftar sumber: tidak diperlukan saat wawancara (hemat token)
-    if (!sensitive) {
+    if (!mode.sensitive) {
       out = removeSection(out, /^###\s+2\.10\b/);      // faktor pribadi sensitif
       out = removeSection(out, /^###\s+Kategori S\b/); // bank pertanyaan sensitif
     }
+    if (mode.keep) {
+      out = removeSection(out, new RegExp(`^###\\s+Kategori (?!(?:${mode.keep.join('|')})\\b)[A-Z]\\b`));
+    }
+    if (!opts.forEval) out = stripPrepMaterial(out);
     return out.trim();
   }
 
@@ -1064,14 +1086,18 @@
     'Ingat ID pertanyaan yang sudah diajukan agar tidak mengulang, dan sebutkan ID tersebut hanya di evaluasi akhir.'
   ];
 
-  function buildSystemPrompt() {
+  function buildSystemPrompt(opts = {}) {
     const mode = sessionMode();
     const hasKb = !!(kb.knowledge || kb.protocol);
     let p = SYSTEM_PROMPT;
     // Long, stable context first (helps Gemini implicit caching); per-session rules last
     if (kb.protocol) p += '\n\n=== PROTOKOL SESI (dari file Sistem_Prompt_Mock_Interviewer_LPDP.md) ===\n' + kb.protocol.trim();
     if (kb.knowledge) {
-      p += '\n\n=== BASIS PENGETAHUAN KANDIDAT ===\n' + prepareKnowledge(kb.knowledge, mode.sensitive) + '\n=== AKHIR BASIS PENGETAHUAN ===';
+      p += '\n\n=== BASIS PENGETAHUAN KANDIDAT ===\n' + prepareKnowledge(kb.knowledge, mode, opts) + '\n=== AKHIR BASIS PENGETAHUAN ===';
+      p += opts.forEval
+        ? '\n(Untuk evaluasi akhir ini, jawaban acuan dan contoh klarifikasi disertakan sebagai pembanding.)'
+        : '\n(Selama sesi, jawaban acuan, contoh klarifikasi, dan "mengapa efektif" sengaja tidak disertakan untuk menghemat token. Bagian itu dikirim lagi saat evaluasi akhir.' +
+          (mode.keep ? ` Bank pertanyaan hanya berisi Kategori ${mode.keep.join(', ')} sesuai mode sesi.)` : ')');
     }
     p += '\n\n=== ATURAN PRIORITAS SIMULASI ===\n' +
       (hasKb ? PRIORITY_RULES : PRIORITY_RULES.slice(0, 2)).map((r) => '- ' + r).join('\n');
@@ -1093,11 +1119,12 @@
       return;
     }
     const estTokens = Math.round(buildSystemPrompt().length / 4);
+    const estEval = Math.round(buildSystemPrompt({ forEval: true }).length / 4);
     let html = `<p class="text-ink2">Termuat dari ${escapeHtml(kb.source)}</p>`;
     html += `<ul class="mt-1 font-mono text-[11px] text-mute break-all">${kb.names.map((n) => `<li>${escapeHtml(n.replace(/^raw\//, ''))}</li>`).join('')}</ul>`;
     if (!kb.knowledge) html += '<p class="mt-1 text-xs tone-warn">Basis pengetahuan belum ada, hanya protokol.</p>';
     if (!kb.protocol) html += '<p class="mt-1 text-xs tone-warn">Protokol sesi belum ada, hanya basis pengetahuan.</p>';
-    html += `<p class="mt-1 font-mono text-[11px] text-mute">≈ ${fmtNum(estTokens)} token/giliran`;
+    html += `<p class="mt-1 font-mono text-[11px] text-mute">≈ ${fmtNum(estTokens)} token/giliran · evaluasi ≈ ${fmtNum(estEval)}`;
     if (lastUsage) {
       html += ` · terakhir ${fmtNum(lastUsage.promptTokenCount)}` +
         (lastUsage.cachedContentTokenCount ? ` (${fmtNum(lastUsage.cachedContentTokenCount)} dari cache)` : '');
@@ -1256,10 +1283,10 @@
     }
   }
 
-  async function callGemini(maxOutputTokens) {
+  async function callGemini(maxOutputTokens, opts = {}) {
     const model = modelName();
     const body = {
-      system_instruction: { parts: [{ text: buildSystemPrompt() }] },
+      system_instruction: { parts: [{ text: buildSystemPrompt({ forEval: !!opts.forEval }) }] },
       contents: state.history,
       generationConfig: { temperature: 0.8, topP: 0.95, maxOutputTokens }
     };
@@ -1326,7 +1353,7 @@
     updateControls();
 
     try {
-      const reply = await callGemini(opts.isEval ? 16384 : 8192);
+      const reply = await callGemini(opts.isEval ? 16384 : 8192, { forEval: !!opts.isEval });
       if (session !== state.sessionId) return; // interview restarted meanwhile
       state.history.push({ role: 'model', parts: [{ text: reply }] });
       hideTyping();
